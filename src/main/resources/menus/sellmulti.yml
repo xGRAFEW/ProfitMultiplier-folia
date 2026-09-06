@@ -34,7 +34,7 @@ content:
     - "&7upgrade your multiplier."
     - ""
     - "&7Current multiplier: &a{current_multiplier}x"
-    - "&7Sold: &f{sold_short}&7/&f{threshold_short} &8(&e{progress_percent}%&8)"
+    - "&7Earned: &f{sold_short}&7/&f{threshold_short} &8(&e{progress_percent}%&8)"
     - "{progress_bar}"
     - ""
     - "&eClick to view items & prices"

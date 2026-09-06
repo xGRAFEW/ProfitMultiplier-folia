@@ -1,3 +1,9 @@
+# IMPORTANT: every "tiers:" threshold below (in "items:" and in each "groups:" entry) is a
+# CURRENCY AMOUNT of cumulative BASE (pre-multiplier) revenue earned from selling — not an item
+# count. E.g. "threshold: 10000" means "$10,000 earned selling this category", not "10,000
+# items sold". Only ever the whole category (group) levels up as one shared total — never a
+# single item within it — unless that item isn't in any group, in which case its own "items:"
+# entry has its own independent ladder.
 hooks:
   EconomyShopGUI: true
   ShopGUIPlus: true

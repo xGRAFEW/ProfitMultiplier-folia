@@ -30,6 +30,15 @@ public class PlayerDataManager {
     private final Map<UUID, Double> bonusTotals = new ConcurrentHashMap<>();
     private final Map<UUID, Double> lastBonus = new ConcurrentHashMap<>();
 
+    /**
+     * Cumulative BASE (pre-multiplier) revenue earned per group/standalone-item — this is what
+     * tier thresholds are now compared against, replacing the old item-count based progress.
+     * Kept separate from {@link #sold} (which still tracks raw item counts, purely for
+     * /pm stats and other display purposes) so existing count data is never touched by this.
+     */
+    private final Map<UUID, Map<String, Double>> groupRevenue = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<Material, Double>> itemRevenue = new ConcurrentHashMap<>();
+
     private volatile long lastReset = 0L;
     private volatile boolean dirty = false;
 
@@ -41,6 +50,8 @@ public class PlayerDataManager {
     public void load() {
         sold.clear();
         bonusTotals.clear();
+        groupRevenue.clear();
+        itemRevenue.clear();
         if (!file.exists()) {
             lastReset = System.currentTimeMillis();
             save();
@@ -70,6 +81,26 @@ public class PlayerDataManager {
                         map.put(mat, soldSec.getLong(matName));
                     }
                     if (!map.isEmpty()) sold.put(uuid, map);
+                }
+
+                ConfigurationSection groupRevSec = sec.getConfigurationSection("group-revenue");
+                if (groupRevSec != null) {
+                    Map<String, Double> map = new ConcurrentHashMap<>();
+                    for (String name : groupRevSec.getKeys(false)) {
+                        map.put(name, groupRevSec.getDouble(name));
+                    }
+                    if (!map.isEmpty()) groupRevenue.put(uuid, map);
+                }
+
+                ConfigurationSection itemRevSec = sec.getConfigurationSection("item-revenue");
+                if (itemRevSec != null) {
+                    Map<Material, Double> map = new ConcurrentHashMap<>();
+                    for (String matName : itemRevSec.getKeys(false)) {
+                        Material mat = VersionHelper.resolveMaterial(matName);
+                        if (mat == null) continue;
+                        map.put(mat, itemRevSec.getDouble(matName));
+                    }
+                    if (!map.isEmpty()) itemRevenue.put(uuid, map);
                 }
 
                 double bonus = sec.getDouble("bonus", 0.0);
@@ -127,6 +158,36 @@ public class PlayerDataManager {
         return m == null ? Collections.emptyMap() : new HashMap<>(m);
     }
 
+    public double getGroupRevenue(UUID uuid, String groupName) {
+        Map<String, Double> m = groupRevenue.get(uuid);
+        if (m == null) return 0.0;
+        Double v = m.get(groupName);
+        return v == null ? 0.0 : v;
+    }
+
+    public double addGroupRevenue(UUID uuid, String groupName, double amount) {
+        Map<String, Double> m = groupRevenue.computeIfAbsent(uuid, k -> new ConcurrentHashMap<>());
+        double nv = m.getOrDefault(groupName, 0.0) + amount;
+        m.put(groupName, nv);
+        dirty = true;
+        return nv;
+    }
+
+    public double getItemRevenue(UUID uuid, Material mat) {
+        Map<Material, Double> m = itemRevenue.get(uuid);
+        if (m == null) return 0.0;
+        Double v = m.get(mat);
+        return v == null ? 0.0 : v;
+    }
+
+    public double addItemRevenue(UUID uuid, Material mat, double amount) {
+        Map<Material, Double> m = itemRevenue.computeIfAbsent(uuid, k -> new ConcurrentHashMap<>());
+        double nv = m.getOrDefault(mat, 0.0) + amount;
+        m.put(mat, nv);
+        dirty = true;
+        return nv;
+    }
+
     public void addBonus(UUID uuid, double amount) {
         bonusTotals.merge(uuid, amount, Double::sum);
         lastBonus.put(uuid, amount);
@@ -152,6 +213,8 @@ public class PlayerDataManager {
     public boolean resetPlayer(UUID uuid, ResetCause cause) {
         boolean had = sold.remove(uuid) != null;
         had |= bonusTotals.remove(uuid) != null;
+        had |= groupRevenue.remove(uuid) != null;
+        had |= itemRevenue.remove(uuid) != null;
         lastBonus.remove(uuid);
         if (had) {
             dirty = true;
@@ -169,6 +232,8 @@ public class PlayerDataManager {
         int n = sold.size();
         sold.clear();
         bonusTotals.clear();
+        groupRevenue.clear();
+        itemRevenue.clear();
         lastBonus.clear();
         lastReset = System.currentTimeMillis();
         dirty = true;
@@ -200,6 +265,18 @@ public class PlayerDataManager {
         }
         for (Map.Entry<UUID, Double> e : bonusTotals.entrySet()) {
             yml.set("players." + e.getKey() + ".bonus", e.getValue());
+        }
+        for (Map.Entry<UUID, Map<String, Double>> e : groupRevenue.entrySet()) {
+            String base = "players." + e.getKey();
+            for (Map.Entry<String, Double> re : e.getValue().entrySet()) {
+                yml.set(base + ".group-revenue." + re.getKey(), re.getValue());
+            }
+        }
+        for (Map.Entry<UUID, Map<Material, Double>> e : itemRevenue.entrySet()) {
+            String base = "players." + e.getKey();
+            for (Map.Entry<Material, Double> re : e.getValue().entrySet()) {
+                yml.set(base + ".item-revenue." + re.getKey().name(), re.getValue());
+            }
         }
         try {
             if (!plugin.getDataFolder().exists()) plugin.getDataFolder().mkdirs();

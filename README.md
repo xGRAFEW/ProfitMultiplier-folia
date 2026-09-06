@@ -1,25 +1,28 @@
 # ProfitMultiplier
 
-![Version](https://img.shields.io/badge/version-1.5.2-brightgreen)
+![Version](https://img.shields.io/badge/version-1.6.0-brightgreen)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.8%20%E2%86%92%2026.x-blue)
 ![Folia](https://img.shields.io/badge/Folia-supported-success)
 ![Java](https://img.shields.io/badge/Java-8%20bytecode%20(built%20with%2025)-orange)
 [![JitPack](https://jitpack.io/v/DevDocDrewskii/ProfitMultiplier.svg)](https://jitpack.io/#DevDocDrewskii/ProfitMultiplier)
 
 **Reward your grinders.** ProfitMultiplier gives players a *cumulative* sell-multiplier
-that climbs as they sell - the more they sell, the more each sale is worth. It hooks into
-your existing shop plugin, so there's nothing to migrate: prices just get boosted at sale
-time based on each player's progression.
+that climbs as they earn - the more money they make selling a category, the more each sale
+in it is worth. It hooks into your existing shop plugin, so there's nothing to migrate:
+prices just get boosted at sale time based on each player's progression.
 
-> Sell 10K crops → **1.1x**, 100K → **1.2x**, 1M → **1.3x**. Configure any ladder you like.
+> Earn $10K from crops → **1.1x**, $100K → **1.2x**, $1M → **1.3x**. Configure any ladder you like.
 
 ---
 
 ## ✨ Features
 
-- **Cumulative progression** - multipliers rise as players cross sold-total thresholds and
-  stay unlocked. The boost is applied *per unit*: a sale that crosses a threshold only
-  boosts the units at/after it.
+- **Cumulative progression, revenue-based** - multipliers rise as players cross cumulative
+  *earnings* thresholds (not item counts) and stay unlocked. A threshold is only ever crossed
+  by the whole category as a shared total - never by a single item within it leveling up on
+  its own (unless that item isn't in any group, in which case it has its own independent
+  ladder). The boost is applied *per unit*: a sale that crosses a threshold only boosts the
+  units at/after it.
 - **Three ladder types**
   - **Per-item** ladders (`DIAMOND`, `WHEAT`, …)
   - **Groups** - many materials sharing one counter (e.g. all *crops*)

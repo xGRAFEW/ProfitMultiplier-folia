@@ -2,6 +2,7 @@ package me.docdrewskii.profitmultiplier.gui;
 
 import me.docdrewskii.profitmultiplier.ProfitMultiplier;
 import me.docdrewskii.profitmultiplier.config.ConfigManager;
+import me.docdrewskii.profitmultiplier.currency.Currency;
 import me.docdrewskii.profitmultiplier.data.PlayerDataManager;
 import me.docdrewskii.profitmultiplier.gui.item.ItemResolver;
 import me.docdrewskii.profitmultiplier.model.ItemGroup;
@@ -476,25 +477,26 @@ public class MenuManager {
     private Map<String, String> computeGroupTokens(Player player, Menu menu, ItemGroup group, long tierThreshold) {
         ConfigManager cfg = plugin.getConfigManager();
         PlayerDataManager pdm = plugin.getDataManager();
+        Currency currency = plugin.getCurrencyManager().get(group.getCurrency());
 
         Map<String, String> t = new HashMap<>();
         t.put("player", player.getName());
 
-        long sold = pdm.getGroupSold(player.getUniqueId(), group.getMaterials());
+        double sold = pdm.getGroupRevenue(player.getUniqueId(), group.getName());
         double scale = cfg.getThresholdScale(player);
-        double current = cfg.groupMultiplierAtCount(group, sold, scale);
+        double current = cfg.revenueMultiplierAt(group.getTiers(), sold, scale);
 
         t.put("group", group.getName());
         t.put("group_name", group.getDisplayName() != null ? group.getDisplayName() : capitalize(group.getName()));
-        t.put("sold", NumberUtil.commas(sold));
-        t.put("sold_raw", Long.toString(sold));
-        t.put("sold_short", NumberUtil.abbreviate(sold));
+        t.put("sold", currency.format(sold));
+        t.put("sold_raw", String.valueOf(sold));
+        t.put("sold_short", currency.formatAbbreviated(sold));
         t.put("current_multiplier", NumberUtil.multiplier(current));
         t.put("max_multiplier", NumberUtil.multiplier(group.getMaxMultiplier()));
         t.put("tier_count", String.valueOf(group.getTiers().size()));
         if (group.getIcon() != null) t.put("icon", group.getIcon());
 
-        long goal;
+        double goal;
         boolean unlocked;
         boolean maxed = false;
         double displayMult;
@@ -504,21 +506,21 @@ public class MenuManager {
             unlocked = sold >= goal;
             displayMult = tierMultiplier(cfg, group, tierThreshold);
         } else {
-            long next = cfg.groupNextThresholdAbove(group, sold, scale);
-            maxed = (next == Long.MAX_VALUE);
-            goal = maxed ? 0L : next;
+            double next = cfg.revenueNextThresholdAbove(group.getTiers(), sold, scale);
+            maxed = (next == Double.MAX_VALUE);
+            goal = maxed ? 0.0 : next;
             unlocked = maxed;
             displayMult = current;
         }
 
-        long remaining = unlocked ? 0L : Math.max(0L, goal - sold);
+        double remaining = unlocked ? 0.0 : Math.max(0.0, goal - sold);
 
         t.put("multiplier", NumberUtil.multiplier(displayMult));
-        t.put("threshold", maxed ? "MAX" : NumberUtil.commas(goal));
-        t.put("threshold_raw", maxed ? "MAX" : Long.toString(goal));
-        t.put("threshold_short", maxed ? "MAX" : NumberUtil.abbreviate(goal));
-        t.put("remaining", NumberUtil.commas(remaining));
-        t.put("remaining_short", NumberUtil.abbreviate(remaining));
+        t.put("threshold", maxed ? "MAX" : currency.format(goal));
+        t.put("threshold_raw", maxed ? "MAX" : String.valueOf(goal));
+        t.put("threshold_short", maxed ? "MAX" : currency.formatAbbreviated(goal));
+        t.put("remaining", currency.format(remaining));
+        t.put("remaining_short", currency.formatAbbreviated(remaining));
         t.put("percent", String.valueOf(NumberUtil.percent(sold, goal)));
         t.put("progress_percent", String.valueOf(NumberUtil.percent(sold, goal)));
         t.put("progress_bar", buildBar(menu, sold, goal));
@@ -618,10 +620,10 @@ public class MenuManager {
         for (MultiplierTier tier : group.getTiers()) {
             if (tier.getThreshold() == threshold) return tier.getMultiplier();
         }
-        return cfg.groupMultiplierAtCount(group, threshold);
+        return cfg.revenueMultiplierAt(group.getTiers(), threshold, 1.0);
     }
 
-    private String buildBar(Menu menu, long current, long goal) {
+    private String buildBar(Menu menu, double current, double goal) {
         String symbol = menu.getBarSymbol();
         char c = (symbol == null || symbol.isEmpty()) ? '|' : symbol.charAt(0);
         return NumberUtil.progressBar(current, goal, menu.getBarLength(), c,

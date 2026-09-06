@@ -8,10 +8,12 @@ import me.docdrewskii.profitmultiplier.currency.Currency;
 import me.docdrewskii.profitmultiplier.data.PlayerDataManager;
 import me.docdrewskii.profitmultiplier.model.GroupStackMode;
 import me.docdrewskii.profitmultiplier.model.ItemGroup;
+import me.docdrewskii.profitmultiplier.model.MultiplierTier;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import java.text.DecimalFormat;
+import java.util.List;
 import java.util.UUID;
 
 public class SellProcessor {
@@ -50,22 +52,29 @@ public class SellProcessor {
         return computeBoostedPrice(player, material, amount, originalPrice);
     }
 
+    /**
+     * Tiers are now driven by cumulative BASE revenue earned (money), not item count — a
+     * category (or a standalone item's own ladder) levels up once its players have earned
+     * enough from selling it, never a single item within a category on its own.
+     */
     private double computeBoostedPrice(Player player, Material material, int amount, double originalPrice) {
         ConfigManager cfg = plugin.getConfigManager();
         PlayerDataManager pdm = plugin.getDataManager();
         UUID uuid = player.getUniqueId();
 
         ItemGroup group = cfg.getGroupFor(material);
-        long prevItem = pdm.getSold(uuid, material);
         double basePerUnit = originalPrice / amount;
         double scale = cfg.getThresholdScale(player);
 
         if (group != null) {
-            long prevGroup = pdm.getGroupSold(uuid, group.getMaterials());
-            return cfg.computeUnifiedSaleValue(material, group, group.getStackMode(),
-                    prevItem, prevGroup, amount, basePerUnit, scale);
+            double prevItemRevenue = pdm.getItemRevenue(uuid, material);
+            double prevGroupRevenue = pdm.getGroupRevenue(uuid, group.getName());
+            return cfg.computeUnifiedRevenueSaleValue(material, group, group.getStackMode(),
+                    prevItemRevenue, prevGroupRevenue, amount, basePerUnit, scale);
         }
-        return cfg.computeSaleValue(material, prevItem, amount, basePerUnit, scale);
+        List<MultiplierTier> tiers = cfg.getLadderTiers(material);
+        double prevRevenue = pdm.getItemRevenue(uuid, material);
+        return cfg.computeTieredRevenueSaleValue(tiers, prevRevenue, amount, basePerUnit, scale);
     }
 
     public void recordSale(Player player, Material material, int amount, double originalPrice, double finalPrice) {
@@ -76,8 +85,8 @@ public class SellProcessor {
         UUID uuid = player.getUniqueId();
 
         ItemGroup group = cfg.getGroupFor(material);
-        long prevItem = pdm.getSold(uuid, material);
-        long prevGroup = group != null ? pdm.getGroupSold(uuid, group.getMaterials()) : 0L;
+        long prevItemCount = pdm.getSold(uuid, material);
+        long prevGroupCount = group != null ? pdm.getGroupSold(uuid, group.getMaterials()) : 0L;
 
         double bonus = finalPrice - originalPrice;
         if (bonus > 0 && originalPrice > 0) {
@@ -92,7 +101,7 @@ public class SellProcessor {
                         originalPrice, finalPrice, finalPrice / originalPrice));
             }
 
-            long totalForMsg = group != null ? prevGroup + amount : prevItem + amount;
+            long totalForMsg = group != null ? prevGroupCount + amount : prevItemCount + amount;
             plugin.getLang().send(player, "multiplier-applied",
                     "{amount}", String.valueOf(amount),
                     "{item}", formatName(material.name()),
@@ -106,52 +115,64 @@ public class SellProcessor {
             pdm.setLastBonus(uuid, 0.0);
         }
 
-        announceThresholds(player, material, amount, group, prevItem, prevGroup);
+        announceThresholds(player, material, amount, group, originalPrice);
+
         pdm.addSold(uuid, material, amount);
+        if (group != null) {
+            pdm.addGroupRevenue(uuid, group.getName(), originalPrice);
+        } else {
+            pdm.addItemRevenue(uuid, material, originalPrice);
+        }
     }
 
-    private void announceThresholds(Player player, Material material, int amount,
-                                    ItemGroup group, long prevItem, long prevGroup) {
+    private void announceThresholds(Player player, Material material, int amount, ItemGroup group, double originalPrice) {
         ConfigManager cfg = plugin.getConfigManager();
+        PlayerDataManager pdm = plugin.getDataManager();
+        UUID uuid = player.getUniqueId();
         double scale = cfg.getThresholdScale(player);
 
         if (group != null && group.getStackMode() != GroupStackMode.ITEM) {
-            long newGroup = prevGroup + amount;
-            double oldG = cfg.groupMultiplierAtCount(group, prevGroup, scale);
-            double newG = cfg.groupMultiplierAtCount(group, newGroup, scale);
+            double prevGroupRevenue = pdm.getGroupRevenue(uuid, group.getName());
+            double newGroupRevenue = prevGroupRevenue + originalPrice;
+            double oldG = cfg.revenueMultiplierAt(group.getTiers(), prevGroupRevenue, scale);
+            double newG = cfg.revenueMultiplierAt(group.getTiers(), newGroupRevenue, scale);
             if (newG > oldG) {
-                long threshold = cfg.groupActiveThreshold(group, newGroup, scale);
+                double threshold = cfg.revenueActiveThreshold(group.getTiers(), newGroupRevenue, scale);
                 plugin.getServer().getPluginManager().callEvent(new ThresholdReachedEvent(
-                        player, material, newGroup, oldG, newG, threshold));
+                        player, material, newGroupRevenue, oldG, newG, threshold));
+                Currency currency = plugin.getCurrencyManager().get(group.getCurrency());
                 plugin.getLang().send(player, "group-threshold-reached",
                         "{group}", formatName(group.getDisplayName() != null ? group.getDisplayName() : group.getName()),
-                        "{total}", String.valueOf(newGroup),
+                        "{total}", currency.format(newGroupRevenue),
                         "{multiplier}", MULT_FORMAT.format(newG),
-                        "{threshold}", String.valueOf(threshold));
+                        "{threshold}", currency.format(threshold));
             }
             plugin.getMilestoneManager().handleCrossings(
-                    player, material, group, group.getTiers(), prevGroup, newGroup, scale);
+                    player, material, group, group.getTiers(), prevGroupRevenue, newGroupRevenue, scale);
         }
 
         boolean itemLadderActive = (group == null) || group.getStackMode() != GroupStackMode.GROUP;
         if (itemLadderActive) {
-            long newItem = prevItem + amount;
-            double oldI = cfg.multiplierAtCount(material, prevItem, scale);
-            double newI = cfg.multiplierAtCount(material, newItem, scale);
+            List<MultiplierTier> tiers = cfg.getLadderTiers(material);
+            double prevItemRevenue = pdm.getItemRevenue(uuid, material);
+            double newItemRevenue = prevItemRevenue + originalPrice;
+            double oldI = cfg.revenueMultiplierAt(tiers, prevItemRevenue, scale);
+            double newI = cfg.revenueMultiplierAt(tiers, newItemRevenue, scale);
             if (newI > oldI) {
-                long threshold = cfg.activeThreshold(material, newItem, scale);
+                double threshold = cfg.revenueActiveThreshold(tiers, newItemRevenue, scale);
                 if (group == null) {
                     plugin.getServer().getPluginManager().callEvent(new ThresholdReachedEvent(
-                            player, material, newItem, oldI, newI, threshold));
+                            player, material, newItemRevenue, oldI, newI, threshold));
                 }
+                Currency currency = plugin.getCurrencyManager().getDefault();
                 plugin.getLang().send(player, "threshold-reached",
                         "{item}", formatName(material.name()),
-                        "{total}", String.valueOf(newItem),
+                        "{total}", currency.format(newItemRevenue),
                         "{multiplier}", MULT_FORMAT.format(newI),
-                        "{threshold}", String.valueOf(threshold));
+                        "{threshold}", currency.format(threshold));
             }
             plugin.getMilestoneManager().handleCrossings(
-                    player, material, null, cfg.getLadderTiers(material), prevItem, newItem, scale);
+                    player, material, null, tiers, prevItemRevenue, newItemRevenue, scale);
         }
     }
 

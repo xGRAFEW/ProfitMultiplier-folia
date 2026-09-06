@@ -2,6 +2,7 @@ package me.docdrewskii.profitmultiplier.milestone;
 
 import me.docdrewskii.profitmultiplier.ProfitMultiplier;
 import me.docdrewskii.profitmultiplier.config.ConfigManager;
+import me.docdrewskii.profitmultiplier.currency.Currency;
 import me.docdrewskii.profitmultiplier.model.ItemGroup;
 import me.docdrewskii.profitmultiplier.model.MilestoneCommands;
 import me.docdrewskii.profitmultiplier.model.MultiplierTier;
@@ -58,20 +59,20 @@ public class MilestoneManager {
     }
 
     public void handleCrossings(Player player, Material material, ItemGroup group,
-                                List<MultiplierTier> tiers, long prev, long now, double scale) {
+                                List<MultiplierTier> tiers, double prevRevenue, double newRevenue, double scale) {
         if (tiers == null || tiers.isEmpty()) return;
         if (!includeDefaultLadder && plugin.getConfigManager().isDefaultLadder(tiers)) return;
         for (int i = 0; i < tiers.size(); i++) {
             MultiplierTier tier = tiers.get(i);
-            long threshold = ConfigManager.scaledThreshold(tier.getThreshold(), scale);
-            if (threshold > prev && threshold <= now) {
-                fire(player, material, group, tier, i + 1, tiers.size(), threshold, now);
+            double threshold = ConfigManager.scaledThreshold(tier.getThreshold(), scale);
+            if (threshold > prevRevenue && threshold <= newRevenue) {
+                fire(player, material, group, tier, i + 1, tiers.size(), threshold, newRevenue);
             }
         }
     }
 
     private void fire(Player player, Material material, ItemGroup group, MultiplierTier tier,
-                      int tierNumber, int tierCount, long threshold, long total) {
+                      int tierNumber, int tierCount, double threshold, double total) {
         boolean max = tierNumber == tierCount;
         Map<String, String> placeholders = buildPlaceholders(
                 player, material, group, tier, tierNumber, tierCount, threshold, total);
@@ -99,10 +100,11 @@ public class MilestoneManager {
 
     private Map<String, String> buildPlaceholders(Player player, Material material, ItemGroup group,
                                                   MultiplierTier tier, int tierNumber, int tierCount,
-                                                  long threshold, long total) {
+                                                  double threshold, double total) {
         String item = friendly(material.name());
         String groupName = group == null ? ""
                 : (group.getDisplayName() != null ? group.getDisplayName() : friendly(group.getName()));
+        Currency currency = plugin.getCurrencyManager().get(group != null ? group.getCurrency() : null);
 
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("{player}", player.getName());
@@ -114,9 +116,9 @@ public class MilestoneManager {
         placeholders.put("{ladder}", group != null ? "group" : "item");
         placeholders.put("{tier}", String.valueOf(tierNumber));
         placeholders.put("{tiers}", String.valueOf(tierCount));
-        placeholders.put("{threshold}", String.valueOf(threshold));
+        placeholders.put("{threshold}", currency.format(threshold));
         placeholders.put("{threshold_formatted}", NumberUtil.commas(threshold));
-        placeholders.put("{total}", String.valueOf(total));
+        placeholders.put("{total}", currency.format(total));
         placeholders.put("{total_formatted}", NumberUtil.commas(total));
         placeholders.put("{multiplier}", NumberUtil.multiplier(tier.getMultiplier()));
         return placeholders;

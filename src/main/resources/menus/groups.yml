@@ -16,7 +16,7 @@ content:
   material: "{icon}"
   name: "&a&l{group_name}"
   lore:
-    - "&7Total sold: &f{sold}"
+    - "&7Total earned: &f{sold}"
     - "&7Current multiplier: &a{current_multiplier}x"
     - "&7Best tier: &b{max_multiplier}x &7(&f{tier_count} &7tiers)"
     - ""

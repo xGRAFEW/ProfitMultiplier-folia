@@ -31,13 +31,26 @@ public final class NumberUtil {
         return trim(value / 1_000_000_000_000.0) + "T";
     }
 
+    public static String abbreviate(double value) {
+        if (value < 1000.0) return trim(value);
+        if (value < 1_000_000.0) return trim(value / 1_000.0) + "K";
+        if (value < 1_000_000_000.0) return trim(value / 1_000_000.0) + "M";
+        if (value < 1_000_000_000_000.0) return trim(value / 1_000_000_000.0) + "B";
+        return trim(value / 1_000_000_000_000.0) + "T";
+    }
+
     public static String progressBar(long current, long goal, int length, char symbol,
+                                     String completeColor, String incompleteColor) {
+        return progressBar((double) current, (double) goal, length, symbol, completeColor, incompleteColor);
+    }
+
+    public static String progressBar(double current, double goal, int length, char symbol,
                                      String completeColor, String incompleteColor) {
         int filled;
         if (goal <= 0) {
             filled = length;
         } else {
-            double ratio = (double) current / (double) goal;
+            double ratio = current / goal;
             if (ratio < 0) ratio = 0;
             if (ratio > 1) ratio = 1;
             filled = (int) Math.round(ratio * length);
@@ -52,8 +65,12 @@ public final class NumberUtil {
     }
 
     public static int percent(long current, long goal) {
+        return percent((double) current, (double) goal);
+    }
+
+    public static int percent(double current, double goal) {
         if (goal <= 0) return 100;
-        double ratio = (double) current / (double) goal;
+        double ratio = current / goal;
         if (ratio < 0) ratio = 0;
         if (ratio > 1) ratio = 1;
         return (int) Math.round(ratio * 100);

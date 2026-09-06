@@ -478,6 +478,118 @@ public class ConfigManager {
         return total;
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Revenue-based tiers: thresholds now compare against cumulative BASE (pre-multiplier)
+    // money earned, not item count. A tier list's own "threshold" numbers are unchanged in
+    // config — they're just interpreted as a currency amount instead of a quantity now.
+    // These operate directly on a List<MultiplierTier> so the exact same logic serves both an
+    // item's own ladder and a group's ladder (and, for GroupStackMode.STACK, both at once).
+    // ---------------------------------------------------------------------------------------
+
+    public double revenueMultiplierAt(List<MultiplierTier> tiers, double revenue, double scale) {
+        if (tiers == null) return 1.0;
+        double best = 1.0;
+        for (MultiplierTier t : tiers) {
+            if (revenue >= scaledThreshold(t.getThreshold(), scale)) best = t.getMultiplier();
+        }
+        return best;
+    }
+
+    public double revenueActiveThreshold(List<MultiplierTier> tiers, double revenue, double scale) {
+        if (tiers == null) return 0.0;
+        double best = 0.0;
+        for (MultiplierTier t : tiers) {
+            double threshold = scaledThreshold(t.getThreshold(), scale);
+            if (revenue >= threshold) best = threshold;
+        }
+        return best;
+    }
+
+    public double revenueNextThresholdAbove(List<MultiplierTier> tiers, double revenue, double scale) {
+        if (tiers == null) return Double.MAX_VALUE;
+        for (MultiplierTier t : tiers) {
+            double threshold = scaledThreshold(t.getThreshold(), scale);
+            if (threshold > revenue) return threshold;
+        }
+        return Double.MAX_VALUE;
+    }
+
+    /**
+     * Base (pre-multiplier) revenue earned from this sale equals {@code amount * basePerUnit}
+     * always — it doesn't depend on the multiplier, so unlike the old count-based math there's
+     * no feedback loop to resolve there. What DOES need segment-stepping is the actual price to
+     * charge, since the multiplier can change mid-sale as cumulative revenue crosses a
+     * threshold partway through the stack being sold.
+     */
+    public double computeTieredRevenueSaleValue(List<MultiplierTier> tiers, double prevRevenue,
+                                                int amount, double basePerUnit, double scale) {
+        if (tiers == null || tiers.isEmpty() || basePerUnit <= 0) return amount * basePerUnit;
+
+        double total = 0.0;
+        double revenue = prevRevenue;
+        int remaining = amount;
+        while (remaining > 0) {
+            double multiplier = revenueMultiplierAt(tiers, revenue, scale);
+            double nextThreshold = revenueNextThresholdAbove(tiers, revenue, scale);
+            int span;
+            if (nextThreshold == Double.MAX_VALUE) {
+                span = remaining;
+            } else {
+                double revenueRoom = nextThreshold - revenue;
+                span = (int) Math.min(remaining, Math.max(1, Math.ceil(revenueRoom / basePerUnit)));
+            }
+            total += span * basePerUnit * multiplier;
+            revenue += span * basePerUnit;
+            remaining -= span;
+        }
+        return total;
+    }
+
+    /** Same as {@link #computeTieredRevenueSaleValue} but combining an item ladder and a group
+     *  ladder per {@link GroupStackMode}, each tracked against its own cumulative revenue. */
+    public double computeUnifiedRevenueSaleValue(Material material, ItemGroup group, GroupStackMode mode,
+                                                 double prevItemRevenue, double prevGroupRevenue,
+                                                 int amount, double basePerUnit, double scale) {
+        if (basePerUnit <= 0) return 0.0;
+        List<MultiplierTier> itemTierList = itemTiers.get(material);
+        List<MultiplierTier> groupTierList = group.getTiers();
+
+        boolean useItem = mode != GroupStackMode.GROUP && itemTierList != null;
+        boolean useGroup = mode != GroupStackMode.ITEM;
+
+        double total = 0.0;
+        double itemRevenue = prevItemRevenue;
+        double groupRevenue = prevGroupRevenue;
+        int remaining = amount;
+        while (remaining > 0) {
+            double itemMult = useItem ? revenueMultiplierAt(itemTierList, itemRevenue, scale) : 1.0;
+            double groupMult = useGroup ? revenueMultiplierAt(groupTierList, groupRevenue, scale) : 1.0;
+
+            double eff;
+            switch (mode) {
+                case ITEM:  eff = itemMult; break;
+                case GROUP: eff = groupMult; break;
+                default:    eff = itemMult * groupMult; break;
+            }
+
+            double itemNext = useItem ? revenueNextThresholdAbove(itemTierList, itemRevenue, scale) : Double.MAX_VALUE;
+            double groupNext = useGroup ? revenueNextThresholdAbove(groupTierList, groupRevenue, scale) : Double.MAX_VALUE;
+            double room = Math.min(
+                    itemNext == Double.MAX_VALUE ? Double.MAX_VALUE : itemNext - itemRevenue,
+                    groupNext == Double.MAX_VALUE ? Double.MAX_VALUE : groupNext - groupRevenue);
+
+            int span = (room == Double.MAX_VALUE)
+                    ? remaining
+                    : (int) Math.min(remaining, Math.max(1, Math.ceil(room / basePerUnit)));
+
+            total += span * basePerUnit * eff;
+            itemRevenue += span * basePerUnit;
+            groupRevenue += span * basePerUnit;
+            remaining -= span;
+        }
+        return total;
+    }
+
     private List<MultiplierTier> parseTiers(List<Map<?, ?>> tierList, String label) {
         List<MultiplierTier> tiers = new ArrayList<>();
         for (Map<?, ?> tierMap : tierList) {

@@ -8,11 +8,11 @@ messages:
 
   threshold-reached:
     enabled: true
-    message: "{prefix}&6&lMILESTONE! &fYou've sold &e{total}x {item} &fand unlocked a &b{multiplier}x &fsell multiplier!"
+    message: "{prefix}&6&lMILESTONE! &fYou've earned &e{total} &ffrom {item} and unlocked a &b{multiplier}x &fsell multiplier!"
 
   group-threshold-reached:
     enabled: true
-    message: "{prefix}&6&lMILESTONE! &fYou've sold &e{total} {group} &fand unlocked a &b{multiplier}x &fsell multiplier on all {group}!"
+    message: "{prefix}&6&lMILESTONE! &fYou've earned &e{total} &ffrom {group} and unlocked a &b{multiplier}x &fsell multiplier on all {group}!"
 
   bonus-display:
     enabled: true

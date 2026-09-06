@@ -162,7 +162,16 @@ public class ProfitCommand implements TabExecutor {
         Player online = Bukkit.getPlayer(id);
         double scale = online != null ? plugin.getConfigManager().getThresholdScale(online) : 1.0;
         for (Map.Entry<Material, Long> e : totals.entrySet()) {
-            double mult = plugin.getConfigManager().multiplierAtCount(e.getKey(), e.getValue(), scale);
+            Material mat = e.getKey();
+            me.docdrewskii.profitmultiplier.model.ItemGroup group = plugin.getConfigManager().getGroupFor(mat);
+            double mult;
+            if (group != null) {
+                double revenue = plugin.getDataManager().getGroupRevenue(id, group.getName());
+                mult = plugin.getConfigManager().revenueMultiplierAt(group.getTiers(), revenue, scale);
+            } else {
+                double revenue = plugin.getDataManager().getItemRevenue(id, mat);
+                mult = plugin.getConfigManager().revenueMultiplierAt(plugin.getConfigManager().getLadderTiers(mat), revenue, scale);
+            }
             String multText = mult > 1.0 ? "&b" + mult + "x" : "&7none";
             plugin.getLang().send(sender, "stats-line",
                     "{item}", friendly(e.getKey()),

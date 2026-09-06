@@ -149,11 +149,21 @@ public void onReset(PlayerDataResetEvent event) {
 
 ## 5. API reference
 
-**`ProfitMultiplierAPI`** (selected): `getSold`, `getTotalSold`, `getAllSold`,
+**Tiers are revenue-based, not item-count-based.** A category (or a standalone item's own
+ladder) levels up once enough BASE (pre-multiplier) money has been earned from selling it —
+never from a raw item count, and never from a single item within a category on its own. Use
+`getGroupRevenue`/`getGroupMultiplier` (or `getItemRevenue`/`getItemMultiplier` for an item
+with no group) to query what actually drives pricing now.
+
+**`ProfitMultiplierAPI`** (selected): `getSold`, `getTotalSold`, `getAllSold` (raw item counts —
+still tracked, but no longer what drives a multiplier), `getGroupRevenue`,
+`getGroupMultiplier`, `getItemRevenue`, `getItemMultiplier`, `getBonusTotal`, `getLastBonus`,
+`addSold`, `setSold`, `addBonus`, `resetPlayer`, `resetAll`, `getLastReset`.
+
 `getMultiplier`, `getMultiplierAt`, `getActiveThreshold`, `getNextThreshold`,
-`getRemainingToNextThreshold`, `getBonusTotal`, `getLastBonus`, `addSold`,
-`setSold`, `addBonus`, `resetPlayer`, `resetAll`, `getLastReset`,
-`calculateSaleValue`.
+`getRemainingToNextThreshold`, and `calculateSaleValue` are still present but `@Deprecated` —
+they're item-count based and no longer reflect real sale pricing; kept only so older code
+compiles.
 
 **Events** (`...api.events`): `MultiplierApplyEvent` (cancellable, settable
 price), `ThresholdReachedEvent`, `PlayerDataResetEvent`, `ServerDataResetEvent`.

@@ -11,13 +11,18 @@ public class ThresholdReachedEvent extends Event {
 
     private final Player player;
     private final Material material;
-    private final long newTotal;
+    private final double newTotal;
     private final double previousMultiplier;
     private final double newMultiplier;
-    private final long threshold;
+    private final double threshold;
 
-    public ThresholdReachedEvent(Player player, Material material, long newTotal,
-                                 double previousMultiplier, double newMultiplier, long threshold) {
+    /**
+     * @param newTotal cumulative BASE revenue (money, not item count) earned on this ladder
+     *                 after the sale that crossed the tier
+     * @param threshold the (currency) threshold that was just crossed
+     */
+    public ThresholdReachedEvent(Player player, Material material, double newTotal,
+                                 double previousMultiplier, double newMultiplier, double threshold) {
         this.player = player;
         this.material = material;
         this.newTotal = newTotal;
@@ -34,7 +39,7 @@ public class ThresholdReachedEvent extends Event {
         return material;
     }
 
-    public long getNewTotal() {
+    public double getNewTotal() {
         return newTotal;
     }
 
@@ -46,7 +51,7 @@ public class ThresholdReachedEvent extends Event {
         return newMultiplier;
     }
 
-    public long getThreshold() {
+    public double getThreshold() {
         return threshold;
     }
 

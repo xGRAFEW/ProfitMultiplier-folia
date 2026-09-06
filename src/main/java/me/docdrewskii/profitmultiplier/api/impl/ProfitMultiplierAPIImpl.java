@@ -70,6 +70,30 @@ public class ProfitMultiplierAPIImpl implements ProfitMultiplierAPI {
     }
 
     @Override
+    public double getGroupRevenue(UUID playerId, String groupName) {
+        return data().getGroupRevenue(playerId, groupName);
+    }
+
+    @Override
+    public double getGroupMultiplier(UUID playerId, String groupName) {
+        me.docdrewskii.profitmultiplier.model.ItemGroup group = config().getGroup(groupName);
+        if (group == null) return 1.0;
+        double revenue = data().getGroupRevenue(playerId, groupName);
+        return config().revenueMultiplierAt(group.getTiers(), revenue, 1.0);
+    }
+
+    @Override
+    public double getItemRevenue(UUID playerId, Material material) {
+        return data().getItemRevenue(playerId, material);
+    }
+
+    @Override
+    public double getItemMultiplier(UUID playerId, Material material) {
+        double revenue = data().getItemRevenue(playerId, material);
+        return config().revenueMultiplierAt(config().getLadderTiers(material), revenue, 1.0);
+    }
+
+    @Override
     public double getBonusTotal(UUID playerId) {
         return data().getBonusTotal(playerId);
     }

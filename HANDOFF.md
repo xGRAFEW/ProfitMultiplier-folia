@@ -5,6 +5,103 @@ for "what's done / what's next." Newest session at the top.
 
 ---
 
+## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.6.0)
+
+### Tiers switched from item-count to cumulative-revenue based (v1.6.0)
+
+Big one — user wanted tier thresholds to represent money earned from selling, not a raw item
+count (e.g. "earn $10,000 from crops" instead of "sell 10,000 crops"). Confirmed with the user
+this is a real breaking behavior change before starting.
+
+**Key design call made without a separate question** (flagged here for visibility): the
+revenue counted toward a threshold is the sale's **BASE (pre-multiplier) price**, not the
+boosted amount actually paid. This was a deliberate choice over the alternative (counting the
+boosted/paid amount) because it avoids a compounding "rich get richer" feedback loop and keeps
+progress pacing predictable regardless of a player's current multiplier — closer in spirit to
+how the old item-count system felt (multiplier-agnostic progress). A nice side effect: because
+base revenue accrues at an exactly constant rate per unit (`basePerUnit`, unaffected by which
+tier is active), the revenue ledger itself needs no iterative stepping at all —
+`pdm.addGroupRevenue(uuid, group.getName(), originalPrice)` is a single addition after the
+sale. Only the *price actually charged* needs segment-stepping (since the multiplier can change
+mid-sale as cumulative revenue crosses a threshold partway through the stack sold) — same
+structural pattern as the old count-based math, just measuring dollars instead of items.
+
+**Data (`PlayerDataManager`)**: added `groupRevenue: Map<UUID, Map<String, Double>>` and
+`itemRevenue: Map<UUID, Map<Material, Double>>`, persisted under new `data.yml` sections
+`players.<uuid>.group-revenue.<name>` / `.item-revenue.<material>`. Deliberately did **not**
+touch the existing `sold` (item count) map or its persistence — that keeps working exactly as
+before for `/pm stats` and anything else that wants a raw "how many has this player sold"
+number; it's just no longer what drives a multiplier. Both new maps are cleared by
+`resetPlayer`/`resetAll` alongside the existing ones.
+
+**Config (`ConfigManager`)**: added a parallel revenue-based method family —
+`revenueMultiplierAt`, `revenueActiveThreshold`, `revenueNextThresholdAbove` (all operate on a
+plain `List<MultiplierTier>`, so the same code serves an item's own ladder or a group's ladder),
+`computeTieredRevenueSaleValue` (single ladder) and `computeUnifiedRevenueSaleValue`
+(`GroupStackMode`-aware, combines an item ladder + group ladder each against their own
+cumulative revenue, for anyone still using `ITEM`/`STACK` mode). **Left the old count-based
+methods (`multiplierAtCount`, `computeSaleValue`, `computeUnifiedSaleValue`,
+`groupMultiplierAtCount`, etc.) completely untouched** — nothing in the real sell path calls
+them anymore, but removing them would've broken `ProfitMultiplierAPI`'s existing (now
+`@Deprecated`) count-based methods, which are still there for compile-compat for any external
+consumer. `MultiplierTier.threshold` stays an `int` field — same YAML key, same number, just
+now interpreted as a currency amount instead of a quantity (documented with a prominent comment
+at the top of `config.yml`).
+
+**`SellProcessor`**: `computeBoostedPrice` now fetches `pdm.getGroupRevenue`/`getItemRevenue`
+instead of item counts, and calls the new `computeUnifiedRevenueSaleValue`/
+`computeTieredRevenueSaleValue`. `recordSale` adds the sale's **base** price to the revenue
+ledger (see design call above) in addition to the existing `addSold` item-count increment.
+`announceThresholds` rewritten to diff old-vs-new revenue instead of old-vs-new count for
+milestone/threshold-crossing detection, and now formats `{total}`/`{threshold}` in
+`threshold-reached`/`group-threshold-reached` as currency (via the group's own `Currency` if it
+has one) instead of a bare number — reworded those two default `lang.yml` messages too since
+"you've sold $10,000x Wheat" doesn't parse; now "you've earned $10,000 from Wheat".
+
+**Downstream consumers updated to match**: `MilestoneManager.handleCrossings` now takes
+`double prevRevenue, double newRevenue` (was `long`) and formats `{threshold}`/`{total}`
+placeholders as currency. `MenuManager.computeGroupTokens` (`/sellmulti` grid,
+`category-items`, `groups` menu tokens) now reads `getGroupRevenue` and formats `sold`/
+`threshold`/`remaining` through `Currency`/`NumberUtil`'s new double overloads — added
+`Currency.formatAbbreviated(double)` (currency-symbol-aware K/M/B abbreviation) and double
+overloads of `NumberUtil.percent`/`progressBar`/`abbreviate` (kept the `long` overloads too,
+delegating to the double ones). `ProfitPlaceholders`' `multiplier_*`/`next_threshold_*`/
+`remaining_*`/`group_*` placeholders rewritten to resolve through revenue instead of count.
+`ProfitCommand`'s `/pm stats` now looks up each material's owning group (or its own ladder) and
+shows the real revenue-based multiplier instead of the old (now wrong) count-based one — the
+raw sold-count column is unchanged.
+
+**Public API (`ProfitMultiplierAPI`)**: added `getGroupRevenue`/`getGroupMultiplier`/
+`getItemRevenue`/`getItemMultiplier`. Marked `getMultiplier`, `getMultiplierAt`,
+`getActiveThreshold`, `getNextThreshold`, `getRemainingToNextThreshold`, and
+`calculateSaleValue` `@Deprecated` (still implemented, still compiles, just no longer reflects
+real pricing) rather than removing them — this is a published API jar
+(`ProfitMultiplier-API-*.jar`) per `DEVELOPERS.md`, so breaking the interface outright felt
+like the wrong tradeoff versus a clearly-marked deprecation. `ThresholdReachedEvent`'s
+`newTotal`/`threshold` fields changed from `long` to `double` (this one **is** a breaking
+signature change — accepted because the event fundamentally represents a currency amount now,
+and there's no way to keep it `long`-typed without silently truncating).
+
+**Not touched / known follow-up**: wiki pages (`wiki/*.md`) still describe the old item-count
+system in places — not updated this round, flagged for whoever touches docs next.
+`config.yml`'s existing demo tier threshold *numbers* (10000/100000/1000000 for crops,
+5000/50000/250000 for ores, etc.) were left exactly as-is — they now mean dollars instead of
+items, which changes how fast they're reached given the per-item prices already configured
+(e.g. ores' $5,000 first tier only needs ~42 diamonds at $120 each — reachable much faster than
+"sell 5,000 ore items" was). Didn't rebalance the numbers since the user didn't ask for that,
+only for the mechanism change — flagged clearly in the wrap-up message so they can retune
+pacing if it feels too easy/hard.
+
+**Verification**: build succeeded first try after all the type changes (long→double) propagated
+correctly. No unit test infra in this project (`compileTestJava NO-SOURCE`, consistent with the
+rest of the codebase), so correctness was verified by hand-tracing the segment-stepping math
+for a sale that crosses a threshold partway through (confirmed: units before the crossing point
+correctly get the old multiplier, units at/after get the new one, and the revenue ledger update
+in `recordSale` exactly matches the ending revenue value the pricing loop itself computed —
+important since those are two separate code paths that must agree). Deployed to the real Folia
+test server, clean enable, no exceptions. Left the server running afterward so the user can
+exercise `/sell` (Vault is hooked there) if they want to see it live.
+
 ## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.5.2)
 
 ### Simplified the demo config.yml — no code changes needed (v1.5.2)
