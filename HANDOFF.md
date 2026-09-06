@@ -5,7 +5,34 @@ for "what's done / what's next." Newest session at the top.
 
 ---
 
-## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.5.1)
+## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.5.2)
+
+### Simplified the demo config.yml — no code changes needed (v1.5.2)
+
+User feedback: setting an item's price required typing it in two places, and they didn't want
+per-item tier ladders at all — only ever want a category/group as a whole to level up, never a
+single item within it. Turned out **the engine already does exactly this** — `stack-mode:
+group` (the default when the key is omitted) already means only the group's own `tiers:`
+counts, and `ConfigManager.getPrice()` already prefers a group's own `prices:` entry over a
+standalone `items:<mat>:price`. The actual problem was purely in the *demo* `config.yml` I'd
+written earlier: I'd given `DIAMOND`/`GOLD_INGOT`/`IRON_INGOT` both a standalone `items:` entry
+(price + its own per-item tier ladder) AND a `groups.ores.prices` entry, and set
+`ores.stack-mode: stack` specifically to *also* demonstrate the per-item-ladder-stacks-with-
+group-ladder feature — which is exactly the "typed twice, and a single item can level up on its
+own" behavior the user doesn't want.
+
+Fixed by editing config content only: removed the redundant `items: DIAMOND/GOLD_INGOT/
+IRON_INGOT` blocks entirely (now `items: {}`, with a comment explaining it's only for a
+material that isn't in any group), and changed `ores.stack-mode` from `stack` to `group`.
+Applied to both the repo's bundled default and the test server's already-deployed config.yml
+(had to fix that one by hand again — menu YAMLs auto-merge for genuinely *missing* keys, but
+values that already exist on a deployed config, like `ores.stack-mode`, are never overwritten
+by the merge, so a live server's own copy needs the same manual edit before it takes effect).
+**Test server needs a `/pm reload` (or restart) to actually pick this up** — didn't restart it
+myself since the user had it running live for their own testing at the time.
+
+No version-worthy code change here, but bumped anyway for changelog traceability since it's a
+real behavior-affecting default-config fix that future fresh installs benefit from.
 
 ### Fixed: raw hex color codes leaking into displayed prices (v1.5.1)
 

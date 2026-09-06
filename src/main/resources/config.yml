@@ -49,30 +49,11 @@ currency:
       position: PREFIX
       format: "#,##0"
 
-items:
-  DIAMOND:
-    price: 120.0
-    tiers:
-      - threshold: 20
-        multiplier: 1.1
-      - threshold: 50
-        multiplier: 1.25
-      - threshold: 100
-        multiplier: 1.5
-  GOLD_INGOT:
-    price: 20.0
-    tiers:
-      - threshold: 32
-        multiplier: 1.15
-      - threshold: 64
-        multiplier: 1.3
-  IRON_INGOT:
-    price: 8.0
-    tiers:
-      - threshold: 64
-        multiplier: 1.1
-      - threshold: 128
-        multiplier: 1.2
+# Per-item ladders go here — only needed for a material that ISN'T in any group below and
+# should still level up on its own. Anything already covered by a group's own "tiers:" (the
+# normal case) doesn't need an entry here at all: a group's tiers already apply to every
+# material listed in that group, combined into one shared progress total.
+items: {}
 
 groups:
   crops:
@@ -127,7 +108,7 @@ groups:
   ores:
     icon: DIAMOND
     display-name: "Ores"
-    stack-mode: stack
+    stack-mode: group
     materials:
       - DIAMOND
       - GOLD_INGOT
