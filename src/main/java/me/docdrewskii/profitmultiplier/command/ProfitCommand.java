@@ -53,6 +53,7 @@ public class ProfitCommand implements TabExecutor {
                 plugin.getCurrencyManager().load();
                 plugin.getMenuManager().loadAll();
                 plugin.getMilestoneManager().load();
+                plugin.getPriceRotationManager().load();
                 lang.send(sender, "config-reloaded");
                 return true;
 

@@ -44,6 +44,17 @@ content:
       - "[sound] UI_BUTTON_CLICK 1 1.2"
 
 items:
+  price-rotation:
+    material: CLOCK
+    slot: 4
+    name: "&b&lNext Price Reset"
+    lore:
+      - "&7Sell prices rotate on a schedule."
+      - "&7Next reroll in: &e{price_reset_countdown}"
+    actions:
+      any:
+        - "[sound] UI_BUTTON_CLICK 1 1"
+
   page-info:
     material: PAPER
     slot: 40

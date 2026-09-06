@@ -5,7 +5,78 @@ for "what's done / what's next." Newest session at the top.
 
 ---
 
-## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.3.1)
+## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.4.0)
+
+### Price rotation + per-item /sellall messages (v1.4.0)
+
+Two more follow-up requests after v1.3.1 shipped:
+
+1. **Random/rotating prices.** New `economy/PriceRotationManager.java`: every material with a
+   configured base price (`ConfigManager.getPricedMaterials()`, new method) gets rerolled
+   independently within ±`variance-percent` of its base price, on a schedule
+   (`config.yml` → `price-rotation:`). `schedule` accepts either `"HH:mm"` (daily, at that
+   server-local time) or a duration like `"30m"`/`"6h"`/`"1d"` (repeating interval from the
+   last reroll) — parsed by one regex-based method (`computeNext`) so admins get both
+   modes from a single field, as requested. State (`next-rotation` epoch millis + the current
+   rolled price per material) persists to `plugins/ProfitMultiplier/prices.yml` so a restart
+   doesn't reset the countdown or silently revert prices to base. A `FoliaScheduler
+   .runGlobalTimer` tick every 10s checks whether the next rotation is due — cheap, and more
+   than precise enough since schedules are in minutes/hours/days.
+   - `SellShopService.sellDetached` and `MenuManager.computeItemTokens`'s `{price}` token both
+     now read `PriceRotationManager.getCurrentPrice(material)` instead of
+     `ConfigManager.getPrice(material)` directly, so the rotated price is what's actually
+     charged AND what's displayed — `ConfigManager.getPrice` stays the "base" price
+     (unaffected by rotation, used as the anchor rotation swings around).
+   - Countdown exposed as menu tokens `{price_reset_countdown}` (e.g. "1d 4h 12m", or "N/A"
+     when the feature is off) and `{price_rotation_enabled}`, injected into the universal
+     `pageTokens` map in `MenuManager.renderContents` so any menu item on any page can use
+     them. Added a CLOCK info item to `sellmulti.yml` (slot 4) showing it by default — off by
+     default (`price-rotation.enabled: false`) so this is a no-op on upgrade until an admin
+     opts in.
+   - `/pm reload` now also calls `PriceRotationManager.load()` (re-reads schedule/variance;
+     does not force an immediate reroll — only the periodic tick does that).
+2. **`/sellall` now sends one line per distinct item type sold** (e.g. "Sold 32x Wheat for
+   $96." then a separate "Sold 12x Carrot for $24." line), reusing the same `sell-item-sold`
+   lang key the `/sell` GUI already used, instead of only the one combined total line. Kept
+   the combined `sellall-result` summary too, sent after the per-item lines — didn't seem
+   like the user wanted the total removed, and it's a one-line toggle in `lang.yml` if they
+   don't want it. Required widening `SellAllResult` from three plain totals into a proper
+   `List<Entry(material, amount, credited)>` (`SellShopService.sellAll` now calls
+   `result.add(...)` per material instead of accumulating counters itself).
+
+Rebuilt, redeployed to the real Folia test server, clean enable/disable cycle, no exceptions.
+
+### Bonus find while testing this: `config.yml` auto-merge was silently broken (fixed)
+
+While verifying price-rotation would actually appear on the live test server after a restart,
+noticed the deployed `config.yml` never picked up `shop:` (added in v1.3.0) either, despite
+`ConfigManager.mergeMissingDefaults()` supposedly existing to do exactly that, and despite it
+never once logging its "Updated config.yml with new default keys." line across every boot this
+whole session (v1.2.0 → v1.4.0) — confirmed by grepping every archived log. Root cause: that
+method compared `defaults.getKeys(true)` against `plugin.getConfig().contains(key)`, but
+`JavaPlugin#reloadConfig()` (called immediately before it) **already** attaches the same
+jar-bundled `config.yml` as a *defaults layer* on `plugin.getConfig()` — standard Bukkit
+behavior — which makes `contains()` return `true` for every jar-bundled key regardless of
+what's actually written to disk. So the "is anything missing" check could never fire; this bug
+predates this session entirely (it's not something introduced by the recent changes) and would
+have silently affected every prior config addition (`groups:` prices, `default:` blacklist
+entries, etc. added to any existing server's `config.yml` after its first install). Fixed by
+loading the on-disk file directly with a separate throwaway `YamlConfiguration` (no defaults
+attached) and checking `.isSet(key)` against *that* instead — `LangManager`'s equivalent
+`lang.yml` merge already did the right thing (it manages its own `YamlConfiguration` rather
+than going through `plugin.getConfig()`), which is why lang defaults always merged fine while
+config ones silently never did. Verified fixed live: fresh boot now logs "Updated config.yml
+with new default keys." and the deployed file gets every missing key, including nested ones
+several levels deep (`groups.crops.prices.WHEAT`, etc.).
+
+Also live-verified the actual rotation mechanics end-to-end on the test server (temporarily set
+`schedule: 20s` on the deployed config, not the repo's default): `prices.yml` got created, the
+tick fired within one 10s check cycle, every priced material rerolled independently within
+±20%, and `next-rotation` advanced correctly. Reverted the test server's config back to
+`enabled: false` / `schedule: 6h` and deleted the test `prices.yml` afterward so the server is
+left in a clean, unmodified-by-testing state.
+
+### Follow-up fixes (v1.3.1, after live client testing)
 
 ### Follow-up fixes (v1.3.1, after live client testing)
 

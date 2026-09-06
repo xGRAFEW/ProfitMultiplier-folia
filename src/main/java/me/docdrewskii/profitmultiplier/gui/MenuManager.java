@@ -383,6 +383,8 @@ public class MenuManager {
         pageTokens.put("total_pages", String.valueOf(totalPages));
         pageTokens.put("next_page", String.valueOf(Math.min(totalPages, page + 2)));
         pageTokens.put("previous_page", String.valueOf(Math.max(1, page)));
+        pageTokens.put("price_reset_countdown", plugin.getPriceRotationManager().formatCountdown());
+        pageTokens.put("price_rotation_enabled", String.valueOf(plugin.getPriceRotationManager().isEnabled()));
 
         boolean firstPage = page == 0;
         boolean lastPage = page >= totalPages - 1;
@@ -578,7 +580,6 @@ public class MenuManager {
     }
 
     private Map<String, String> computeItemTokens(Player player, ItemGroup group, Material material) {
-        ConfigManager cfg = plugin.getConfigManager();
         PlayerDataManager pdm = plugin.getDataManager();
 
         Map<String, String> t = new HashMap<>();
@@ -587,7 +588,7 @@ public class MenuManager {
         t.put("item", material.name());
         t.put("item_name", friendlyMaterial(material));
 
-        Double price = cfg.getPrice(material);
+        Double price = plugin.getPriceRotationManager().getCurrentPrice(material);
         t.put("price", price != null ? plugin.getEconomyManager().format(price) : "&7N/A");
         t.put("has_price", String.valueOf(price != null));
 

@@ -10,6 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.permissions.Permissible;
 
+import java.io.File;
 import java.util.*;
 
 public class ConfigManager {
@@ -355,6 +356,17 @@ public class ConfigManager {
         return getPrice(material) != null;
     }
 
+    /** Every material that has a configured price anywhere (group prices + standalone item prices). */
+    public Set<Material> getPricedMaterials() {
+        Set<Material> all = new HashSet<>(itemPrices.keySet());
+        for (ItemGroup group : groups.values()) {
+            for (Material mat : group.getMaterials()) {
+                if (group.getPrice(mat) != null) all.add(mat);
+            }
+        }
+        return all;
+    }
+
     public ItemGroup getGroup(String name) {
         return name == null ? null : groups.get(name.toLowerCase(Locale.ROOT));
     }
@@ -504,15 +516,23 @@ public class ConfigManager {
             org.bukkit.configuration.file.YamlConfiguration defaults =
                     org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                             new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
+
+            // JavaPlugin#reloadConfig() already attaches this same bundled config.yml as a
+            // "defaults" layer on plugin.getConfig(), which makes ConfigurationSection#contains
+            // return true for every jar-bundled key regardless of what's actually on disk — so
+            // the missing-key check must read the deployed file directly, ignoring defaults.
+            org.bukkit.configuration.file.YamlConfiguration onDisk =
+                    org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                            new File(plugin.getDataFolder(), "config.yml"));
+
             boolean missing = false;
             for (String key : defaults.getKeys(true)) {
-                if (!plugin.getConfig().contains(key)) {
+                if (!onDisk.isSet(key)) {
                     missing = true;
                     break;
                 }
             }
             if (missing) {
-                plugin.getConfig().setDefaults(defaults);
                 plugin.getConfig().options().copyDefaults(true);
                 plugin.saveConfig();
                 plugin.reloadConfig();

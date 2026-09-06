@@ -39,7 +39,7 @@ public class SellShopService {
     public Double sellDetached(Player player, Material material, int amount) {
         if (player == null || material == null || amount <= 0) return null;
 
-        Double unitPrice = plugin.getConfigManager().getPrice(material);
+        Double unitPrice = plugin.getPriceRotationManager().getCurrentPrice(material);
         if (unitPrice == null || unitPrice <= 0) return null;
 
         if (!plugin.getEconomyManager().isAvailable()) return null;
@@ -68,21 +68,16 @@ public class SellShopService {
             counts.merge(mat, stack.getAmount(), Integer::sum);
         }
 
-        int itemsSold = 0;
-        int typesSold = 0;
-        double totalCredited = 0.0;
-
+        SellAllResult result = new SellAllResult();
         for (Map.Entry<Material, Integer> entry : counts.entrySet()) {
             Double credited = sellDetached(player, entry.getKey(), entry.getValue());
             if (credited == null) continue;
 
             removeExact(player, entry.getKey(), entry.getValue());
-            itemsSold += entry.getValue();
-            typesSold++;
-            totalCredited += credited;
+            result.add(entry.getKey(), entry.getValue(), credited);
         }
 
-        return new SellAllResult(itemsSold, typesSold, totalCredited);
+        return result;
     }
 
     private void removeExact(Player player, Material material, int amount) {

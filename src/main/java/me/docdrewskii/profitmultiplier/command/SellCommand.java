@@ -3,6 +3,7 @@ package me.docdrewskii.profitmultiplier.command;
 import me.docdrewskii.profitmultiplier.ProfitMultiplier;
 import me.docdrewskii.profitmultiplier.shop.SellAllResult;
 import me.docdrewskii.profitmultiplier.shop.SellMenu;
+import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -48,10 +49,25 @@ public class SellCommand implements TabExecutor {
             plugin.getLang().send(player, "sellall-empty");
             return;
         }
+        for (SellAllResult.Entry entry : result.getEntries()) {
+            plugin.getLang().send(player, "sell-item-sold",
+                    "{amount}", String.valueOf(entry.getAmount()),
+                    "{item}", friendly(entry.getMaterial()),
+                    "{price}", plugin.getEconomyManager().format(entry.getCredited()));
+        }
         plugin.getLang().send(player, "sellall-result",
                 "{items}", String.valueOf(result.getItemsSold()),
                 "{types}", String.valueOf(result.getDistinctTypes()),
                 "{total}", plugin.getEconomyManager().format(result.getTotalCredited()));
+    }
+
+    private String friendly(Material mat) {
+        String name = mat.name().replace('_', ' ').toLowerCase();
+        StringBuilder sb = new StringBuilder();
+        for (String w : name.split(" ")) {
+            if (!w.isEmpty()) sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1)).append(" ");
+        }
+        return sb.toString().trim();
     }
 
     private boolean noPerm(Player player, String perm) {

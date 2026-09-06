@@ -14,6 +14,18 @@ shop:
   sell-gui-title: "&aSell Menu"
   sell-gui-rows: 4
 
+# Optional random/rotating prices. When enabled, every item that has a "price"/"prices" entry
+# gets an independently-randomized current price (+/- variance-percent of its configured base
+# price) each time the schedule below fires. Affects /sell, /sellall, and the {price} shown in
+# menus. Disabled by default - flip it on and it takes effect after the next reload/restart.
+price-rotation:
+  enabled: false
+  # How far the random price can swing from the configured base price, in percent.
+  variance-percent: 20
+  # Either a clock time "HH:mm" (rotates once a day at that server-local time), or a duration
+  # like "30m", "6h", "1d" (rotates repeatedly on that interval, counted from the last reroll).
+  schedule: "6h"
+
 currency:
   symbol: "$"
   position: PREFIX

@@ -9,6 +9,7 @@ import me.docdrewskii.profitmultiplier.config.LangManager;
 import me.docdrewskii.profitmultiplier.currency.CurrencyManager;
 import me.docdrewskii.profitmultiplier.data.PlayerDataManager;
 import me.docdrewskii.profitmultiplier.economy.EconomyManager;
+import me.docdrewskii.profitmultiplier.economy.PriceRotationManager;
 import me.docdrewskii.profitmultiplier.gui.MenuListener;
 import me.docdrewskii.profitmultiplier.gui.MenuManager;
 import me.docdrewskii.profitmultiplier.hook.sell.SellHookManager;
@@ -26,6 +27,7 @@ public class ProfitMultiplier extends JavaPlugin {
 
     private static final long PERIODIC_SECONDS = 60L * 5L;
     private static final long MENU_REFRESH_TICKS = 20L;
+    private static final long PRICE_ROTATION_CHECK_TICKS = 20L * 10L;
 
     private ConfigManager configManager;
     private LangManager langManager;
@@ -36,6 +38,7 @@ public class ProfitMultiplier extends JavaPlugin {
     private SellHookManager sellHookManager;
     private EconomyManager economyManager;
     private SellShopService sellShopService;
+    private PriceRotationManager priceRotationManager;
 
     @Override
     public void onEnable() {
@@ -74,11 +77,19 @@ public class ProfitMultiplier extends JavaPlugin {
                     + "until one is installed (e.g. EssentialsX). Everything else still works.");
         }
 
+        priceRotationManager = new PriceRotationManager(this);
+        priceRotationManager.load();
+        if (priceRotationManager.isEnabled()) {
+            getLogger().info("Price rotation enabled — next reroll in " + priceRotationManager.formatCountdown() + ".");
+        }
+
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
         getServer().getPluginManager().registerEvents(new SellMenuListener(this), this);
 
         FoliaScheduler.runGlobalTimer(this, () -> menuManager.refreshOpenMenus(),
                 MENU_REFRESH_TICKS, MENU_REFRESH_TICKS);
+        FoliaScheduler.runGlobalTimer(this, () -> priceRotationManager.tick(),
+                PRICE_ROTATION_CHECK_TICKS, PRICE_ROTATION_CHECK_TICKS);
 
         PluginCommand command = getCommand("profitmultiplier");
         if (command != null) {
@@ -155,5 +166,9 @@ public class ProfitMultiplier extends JavaPlugin {
 
     public SellShopService getSellShopService() {
         return sellShopService;
+    }
+
+    public PriceRotationManager getPriceRotationManager() {
+        return priceRotationManager;
     }
 }
