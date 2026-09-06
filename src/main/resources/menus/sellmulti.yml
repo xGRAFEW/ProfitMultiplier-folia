@@ -12,7 +12,7 @@ progress-bar:
   incomplete: "&7"
 
 filler:
-  enabled: true
+  enabled: false
   material: GRAY_STAINED_GLASS_PANE
   name: " "
 

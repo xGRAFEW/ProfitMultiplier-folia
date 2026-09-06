@@ -1,6 +1,6 @@
 # ProfitMultiplier
 
-![Version](https://img.shields.io/badge/version-1.3.0-brightgreen)
+![Version](https://img.shields.io/badge/version-1.3.1-brightgreen)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.8%20%E2%86%92%2026.x-blue)
 ![Folia](https://img.shields.io/badge/Folia-supported-success)
 ![Java](https://img.shields.io/badge/Java-8%20bytecode%20(built%20with%2025)-orange)
@@ -39,12 +39,12 @@ time based on each player's progression.
   progress bars.
 - **Built-in shop** (`/sell`, `/sellall`) - optional, requires **Vault** + any Vault-compatible
   economy (EssentialsX, CMI, ...). Give any item a `price`/`prices` entry in `config.yml` and
-  it becomes sellable: `/sell` opens a chest-style GUI you drag items into (sold the instant
-  they land - the slot is never used as storage, so there's no window for items to get lost or
-  duped), `/sellall` sweeps your whole inventory in one command. Both go through the exact
-  same pricing/threshold engine as every other shop hook, so progress stays consistent no
-  matter which route a sale comes through. If no economy is found, everything else keeps
-  working and only these two commands report unavailable.
+  it becomes sellable: `/sell` opens a chest-style GUI you drag items into - only sellable
+  items are accepted, and closing the menu is what finalizes the sale (everything left inside
+  is sold in one pass, or handed back if it can't be), `/sellall` sweeps your whole inventory
+  in one command. Both go through the exact same pricing/threshold engine as every other shop
+  hook, so progress stays consistent no matter which route a sale comes through. If no economy
+  is found, everything else keeps working and only these two commands report unavailable.
 - **Milestone commands** - run any console command when a player unlocks a tier (crate keys,
   titles, broadcasts), globally or per tier.
 - **Threshold scaling** - permission-based discounts so donor ranks level up faster

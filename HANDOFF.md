@@ -5,9 +5,55 @@ for "what's done / what's next." Newest session at the top.
 
 ---
 
-## Session: per-category progress GUI + built-in shop (v1.3.0)
+## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.3.1)
 
-### Task
+### Follow-up fixes (v1.3.1, after live client testing)
+
+Live-tested on the real Folia test server once a working Vault economy was available (see
+"Open items" below — turned out to be `plugins/zEssentials/modules/economy/config.yml` having
+`enable: false`; flipping it to `true` registered zEssentials' economy with Vault and fixed
+`/sell`/`/sellall` immediately with **zero ProfitMultiplier changes needed** — confirmed via
+the boot log: `[zEssentials] Register Vault Economy.` → `[ProfitMultiplier] Hooked into a
+Vault economy`). After that, user feedback from actually clicking through the GUI:
+
+1. **`/sell` mechanic changed**: was "sell the instant an item lands in a slot, slot always
+   stays empty" (zero-dupe-window by construction). User wants the opposite UX: items sit in
+   the sell-chest slots for real (like a normal container) while dragging more in, and the
+   sale only finalizes when the player **closes** the GUI — everything left inside at that
+   point is sold in one pass (or handed back if a sale fails, e.g. economy vanished
+   mid-session). Rewrote `SellMenuListener` around this:
+   - `InventoryClickEvent`: switches on `event.getAction()` instead of cancelling
+     everything — only cancels the specific click if it would introduce an unsellable item
+     into a sell slot (checked for `PLACE_ALL/SOME/ONE`, `SWAP_WITH_CURSOR` via
+     `event.getCursor()`, `MOVE_TO_OTHER_INVENTORY` shift-click-in via
+     `event.getCurrentItem()`, `HOTBAR_SWAP`/`HOTBAR_MOVE_AND_READD` via the hotbar slot
+     item). Every other action only ever *removes* items from the sell inventory, so it's
+     left alone — normal chest-like play.
+   - `InventoryDragEvent`: now allowed (previously blanket-cancelled) unless the dragged
+     item type isn't sellable.
+   - `InventoryCloseEvent`: aggregates everything left in the inventory by material, sells
+     each via `SellShopService.sellDetached` (still pay-before-take at that layer), and
+     gives back anything that couldn't be sold via `Player#getInventory().addItem` +
+     drop-on-overflow, then clears the inventory.
+   - Trade-off accepted knowingly: items now sit in a real (if non-persistent) `Inventory`
+     for the duration the GUI is open, so a mid-session server crash would **lose** those
+     items (they're never written to disk — a plain custom `Inventory` isn't tied to a
+     block/container). This is a loss risk, not a dupe risk, and only fires on an actual
+     crash (not something a player can trigger deliberately) — accepted per explicit user
+     request to change the UX this way.
+2. **Removed the gray glass-pane filler/background from every menu** (`sellmulti.yml`,
+   `category-items.yml`, `groups.yml`) — set `filler.enabled: false` in all three (left the
+   block in place, just toggled off, so it's still there to flip back on or restyle). User
+   is doing their own GUI art/decoration from here.
+3. **Sell chat message** (item name + price, sent only to the seller) — this was already
+   exactly what `SellMenuListener.announceSale` did (`plugin.getLang().send(player, ...)`,
+   never broadcast); no change needed there, just re-verified it still fires correctly under
+   the new close-to-finalize flow (one line per distinct material sold).
+
+Rebuilt, redeployed to the real Folia test server, did another enable/disable cycle — clean,
+no exceptions, `Hooked into a Vault economy` still confirmed present in the log.
+
+### Task (original v1.3.0 scope)
 
 1. ✅ Restructure `/sellmulti` so every category (`ItemGroup`) shows its own progress,
    multiplier, and threshold ladder — never a combined/global counter. This was mostly
