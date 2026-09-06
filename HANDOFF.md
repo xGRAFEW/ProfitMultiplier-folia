@@ -5,7 +5,22 @@ for "what's done / what's next." Newest session at the top.
 
 ---
 
-## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.5.0)
+## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.5.1)
+
+### Fixed: raw hex color codes leaking into displayed prices (v1.5.1)
+
+User screenshotted a category-items tooltip showing literally `#2bd66f2$` instead of a colored
+price. Root cause: `EconomyManager.format(double)` delegated to the Vault economy's own
+`Economy#format(double)` when available (falling back to our own `Currency` formatter only if
+no economy was hooked) — but `zEssentials` (the economy on the test server) returns its price
+text using its own `price-reductions` config, which is MiniMessage/hex-tag styled (its
+`display: "#2bd66f%amount%"` config produces exactly the literal text seen — the hex tag isn't
+a legacy `&`-code, so `ChatColor.translateAlternateColorCodes` never touches it and it just
+prints as raw text once dropped into item lore). Different economy plugins can return
+arbitrarily different markup here, none of it guaranteed legacy-safe. Fixed by having
+`EconomyManager.format()` always use our own `CurrencyManager` formatter instead — it's fully
+under our control and known-safe, and this only affects *display* strings; the actual
+`depositPlayer` transaction is untouched and still goes through Vault/zEssentials correctly.
 
 ### Inventory price lore + /pm pricelore toggle (v1.5.0)
 

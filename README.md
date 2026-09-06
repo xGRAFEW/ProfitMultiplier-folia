@@ -1,6 +1,6 @@
 # ProfitMultiplier
 
-![Version](https://img.shields.io/badge/version-1.5.0-brightgreen)
+![Version](https://img.shields.io/badge/version-1.5.1-brightgreen)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.8%20%E2%86%92%2026.x-blue)
 ![Folia](https://img.shields.io/badge/Folia-supported-success)
 ![Java](https://img.shields.io/badge/Java-8%20bytecode%20(built%20with%2025)-orange)

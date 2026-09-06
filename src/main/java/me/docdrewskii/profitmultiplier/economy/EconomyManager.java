@@ -42,14 +42,16 @@ public class EconomyManager {
         }
     }
 
+    /**
+     * Formats an amount for display in our own chat messages/menus. Deliberately does NOT call
+     * the Vault economy's own {@code format(double)} — different economy plugins return wildly
+     * different markup there (e.g. zEssentials returns MiniMessage-style raw hex color tags like
+     * "#2bd66f2$" instead of legacy "&"-codes), which shows up as broken literal text once we
+     * drop it into item lore or chat. Using our own {@link me.docdrewskii.profitmultiplier.currency.Currency}
+     * formatter keeps this fully under our control and guaranteed legacy-color-safe, regardless
+     * of which economy plugin is actually handling the money.
+     */
     public String format(double amount) {
-        Economy economy = economy();
-        if (economy != null) {
-            try {
-                return economy.format(amount);
-            } catch (Throwable ignored) {
-            }
-        }
         return plugin.getCurrencyManager().getDefault().format(amount);
     }
 
