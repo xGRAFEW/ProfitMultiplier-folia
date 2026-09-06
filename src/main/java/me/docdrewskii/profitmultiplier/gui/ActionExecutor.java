@@ -1,6 +1,7 @@
 package me.docdrewskii.profitmultiplier.gui;
 
 import me.docdrewskii.profitmultiplier.ProfitMultiplier;
+import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
 import me.docdrewskii.profitmultiplier.util.TextUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
@@ -35,7 +36,9 @@ public class ActionExecutor {
                 Bukkit.broadcastMessage(TextUtil.render(player, arg, tokens));
                 break;
             case CONSOLE:
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command(player, arg, tokens));
+                String consoleCommand = command(player, arg, tokens);
+                FoliaScheduler.runGlobal(plugin, () ->
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), consoleCommand));
                 break;
             case PLAYER:
                 player.performCommand(command(player, arg, tokens));
@@ -78,8 +81,7 @@ public class ActionExecutor {
     }
 
     private void openLater(Player player, String menuName) {
-
-        Bukkit.getScheduler().runTask(plugin, () -> plugin.getMenuManager().open(player, menuName));
+        FoliaScheduler.runForPlayer(plugin, player, () -> plugin.getMenuManager().open(player, menuName));
     }
 
     @SuppressWarnings({"deprecation", "removal"})

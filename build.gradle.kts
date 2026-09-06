@@ -7,11 +7,11 @@ plugins {
 }
 
 group = "me.docdrewskii.profitmultiplier"
-version = "1.1.0"
+version = "1.2.0"
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
@@ -33,13 +33,13 @@ repositories {
 
 configurations.compileClasspath {
     attributes {
-        attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 21)
+        attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 25)
     }
 }
 
 dependencies {
 
-    compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:26.2.build.121-stable")
 
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
 

@@ -5,6 +5,7 @@ import me.docdrewskii.profitmultiplier.api.ResetCause;
 import me.docdrewskii.profitmultiplier.config.ConfigManager;
 import me.docdrewskii.profitmultiplier.config.LangManager;
 import me.docdrewskii.profitmultiplier.data.PlayerDataManager;
+import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -99,7 +100,7 @@ public class ProfitCommand implements TabExecutor {
                 plugin.getLang().send(sender, "player-not-online", "{player}", args[2]);
                 return;
             }
-            plugin.getMenuManager().open(target, menuName);
+            FoliaScheduler.runForPlayer(plugin, target, () -> plugin.getMenuManager().open(target, menuName));
             plugin.getLang().send(sender, "menu-opened-other",
                     "{player}", target.getName(), "{menu}", menuName);
             return;

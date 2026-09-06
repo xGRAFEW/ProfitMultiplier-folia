@@ -3,7 +3,7 @@ package me.docdrewskii.profitmultiplier.milestone;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import me.docdrewskii.profitmultiplier.ProfitMultiplier;
-import org.bukkit.Bukkit;
+import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.io.BufferedReader;
@@ -179,7 +179,7 @@ public class DiscordWebhook {
 
     public void send(Map<String, String> placeholders) {
         String body = buildPayload(placeholders).toString();
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> post(body));
+        FoliaScheduler.runAsync(plugin, () -> post(body));
     }
 
     private JsonObject buildPayload(Map<String, String> placeholders) {

@@ -1,8 +1,9 @@
 # ProfitMultiplier
 
-![Version](https://img.shields.io/badge/version-1.1.0-brightgreen)
+![Version](https://img.shields.io/badge/version-1.2.0-brightgreen)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.8%20%E2%86%92%2026.x-blue)
-![Java](https://img.shields.io/badge/Java-8%20bytecode%20(built%20with%2021)-orange)
+![Folia](https://img.shields.io/badge/Folia-supported-success)
+![Java](https://img.shields.io/badge/Java-8%20bytecode%20(built%20with%2025)-orange)
 [![JitPack](https://jitpack.io/v/DevDocDrewskii/ProfitMultiplier.svg)](https://jitpack.io/#DevDocDrewskii/ProfitMultiplier)
 
 **Reward your grinders.** ProfitMultiplier gives players a *cumulative* sell-multiplier
@@ -41,7 +42,9 @@ time based on each player's progression.
 - **PlaceholderAPI** expansion for placards, scoreboards, holograms, etc.
 - **Developer API** - read progression, react to milestones, modify the boost. See
   [DEVELOPERS.md](DEVELOPERS.md).
-- **Wide compatibility** - single jar, Java 8 bytecode, runs on Spigot/Paper **1.8 → 26.x**.
+- **Wide compatibility** - single jar, Java 8 bytecode, runs on Spigot/Paper **1.8 → 26.x**,
+  including **Folia** (regionized multithreading) — all scheduling is routed through the
+  Paper/Folia-shared scheduler API, so nothing needs a single "main thread".
 - **Auto-reset** - optionally wipe everyone's progression on a schedule (seasons/resets).
 
 ---
@@ -202,10 +205,10 @@ Full guide, examples, and publishing instructions: **[DEVELOPERS.md](DEVELOPERS.
 
 Outputs to `build/libs/`:
 
-- `ProfitMultiplier-1.1.0.jar` - the plugin
-- `ProfitMultiplier-API-1.1.0.jar` - the slim developer API jar (+ `-sources`)
+- `ProfitMultiplier-1.2.0.jar` - the plugin
+- `ProfitMultiplier-API-1.2.0.jar` - the slim developer API jar (+ `-sources`)
 
-Built with the JDK 21 toolchain but emits **Java 8 bytecode** for maximum server compatibility.
+Built with the JDK 25 toolchain but emits **Java 8 bytecode** for maximum server compatibility.
 
 ---
 

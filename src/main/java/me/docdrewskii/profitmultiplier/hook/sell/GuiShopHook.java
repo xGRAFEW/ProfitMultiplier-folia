@@ -1,6 +1,7 @@
 package me.docdrewskii.profitmultiplier.hook.sell;
 
 import me.docdrewskii.profitmultiplier.ProfitMultiplier;
+import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
 import me.docdrewskii.profitmultiplier.util.VersionHelper;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -146,11 +147,7 @@ public class GuiShopHook implements SellHook, InvocationHandler, Listener {
 
             record = () -> processor.recordSale(player, material, quantity, 0.0, 0.0);
         }
-        if (Bukkit.isPrimaryThread()) {
-            record.run();
-        } else {
-            Bukkit.getScheduler().runTask(plugin, record);
-        }
+        FoliaScheduler.runForPlayer(plugin, player, record);
     }
 
     private Player currentSeller() {

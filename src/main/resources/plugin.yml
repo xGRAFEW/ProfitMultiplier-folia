@@ -4,6 +4,7 @@ version: "${version}"
 main: me.docdrewskii.profitmultiplier.ProfitMultiplier
 
 api-version: "1.13"
+folia-supported: true
 description: Cumulative sell-progression multiplier for multiple shop plugins
 author: DocDrewskii
 

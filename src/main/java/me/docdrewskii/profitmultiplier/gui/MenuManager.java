@@ -6,6 +6,7 @@ import me.docdrewskii.profitmultiplier.data.PlayerDataManager;
 import me.docdrewskii.profitmultiplier.gui.item.ItemResolver;
 import me.docdrewskii.profitmultiplier.model.ItemGroup;
 import me.docdrewskii.profitmultiplier.model.MultiplierTier;
+import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
 import me.docdrewskii.profitmultiplier.util.NumberUtil;
 import me.docdrewskii.profitmultiplier.util.TextUtil;
 import me.docdrewskii.profitmultiplier.util.VersionHelper;
@@ -324,14 +325,16 @@ public class MenuManager {
 
     public void refreshOpenMenus() {
         for (Player player : Bukkit.getOnlinePlayers()) {
-            InventoryHolder holder = player.getOpenInventory().getTopInventory().getHolder();
-            if (holder instanceof MenuHolder) {
-                MenuHolder mh = (MenuHolder) holder;
-                if (mh.getMenu().isUpdate() && mh.getInventory() != null) {
-                    renderContents(player, mh.getMenu(), mh.getInventory());
-                    player.updateInventory();
+            FoliaScheduler.runForPlayer(plugin, player, () -> {
+                InventoryHolder holder = player.getOpenInventory().getTopInventory().getHolder();
+                if (holder instanceof MenuHolder) {
+                    MenuHolder mh = (MenuHolder) holder;
+                    if (mh.getMenu().isUpdate() && mh.getInventory() != null) {
+                        renderContents(player, mh.getMenu(), mh.getInventory());
+                        player.updateInventory();
+                    }
                 }
-            }
+            });
         }
     }
 

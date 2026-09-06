@@ -13,13 +13,14 @@ import me.docdrewskii.profitmultiplier.gui.MenuManager;
 import me.docdrewskii.profitmultiplier.hook.sell.SellHookManager;
 import me.docdrewskii.profitmultiplier.milestone.MilestoneManager;
 import me.docdrewskii.profitmultiplier.placeholder.ProfitPlaceholders;
+import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class ProfitMultiplier extends JavaPlugin {
 
-    private static final long PERIODIC_TICKS = 20L * 60L * 5L;
+    private static final long PERIODIC_SECONDS = 60L * 5L;
     private static final long MENU_REFRESH_TICKS = 20L;
 
     private ConfigManager configManager;
@@ -60,7 +61,7 @@ public class ProfitMultiplier extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
 
-        getServer().getScheduler().runTaskTimer(this, () -> menuManager.refreshOpenMenus(),
+        FoliaScheduler.runGlobalTimer(this, () -> menuManager.refreshOpenMenus(),
                 MENU_REFRESH_TICKS, MENU_REFRESH_TICKS);
 
         PluginCommand command = getCommand("profitmultiplier");
@@ -75,10 +76,10 @@ public class ProfitMultiplier extends JavaPlugin {
             getLogger().info("Hooked into PlaceholderAPI.");
         }
 
-        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+        FoliaScheduler.runAsyncTimer(this, () -> {
             dataManager.checkAutoReset();
             dataManager.saveIfDirty();
-        }, PERIODIC_TICKS, PERIODIC_TICKS);
+        }, PERIODIC_SECONDS, PERIODIC_SECONDS);
 
         getLogger().info("ProfitMultiplier v" + getDescription().getVersion() + " enabled.");
     }

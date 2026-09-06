@@ -1,6 +1,7 @@
 package me.docdrewskii.profitmultiplier.hook.sell;
 
 import me.docdrewskii.profitmultiplier.ProfitMultiplier;
+import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.PluginCommand;
@@ -59,7 +60,7 @@ public class EssentialsSellHook implements SellHook, Listener {
         }
         Player player = event.getPlayer();
         Map<Material, Integer> before = snapshot(player);
-        Bukkit.getScheduler().runTask(plugin, () -> settle(player, before));
+        FoliaScheduler.runForPlayer(plugin, player, () -> settle(player, before));
     }
 
     private boolean isEssentialsSell(String message) {

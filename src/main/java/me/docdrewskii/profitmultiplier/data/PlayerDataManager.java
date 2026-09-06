@@ -5,6 +5,7 @@ import me.docdrewskii.profitmultiplier.api.ResetCause;
 import me.docdrewskii.profitmultiplier.api.events.PlayerDataResetEvent;
 import me.docdrewskii.profitmultiplier.api.events.ServerDataResetEvent;
 import me.docdrewskii.profitmultiplier.config.ConfigManager;
+import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
 import me.docdrewskii.profitmultiplier.util.VersionHelper;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -177,11 +178,7 @@ public class PlayerDataManager {
     }
 
     private void fireSync(Event event) {
-        if (Bukkit.isPrimaryThread()) {
-            Bukkit.getPluginManager().callEvent(event);
-        } else {
-            Bukkit.getScheduler().runTask(plugin, () -> Bukkit.getPluginManager().callEvent(event));
-        }
+        FoliaScheduler.runGlobal(plugin, () -> Bukkit.getPluginManager().callEvent(event));
     }
 
     public long getLastReset() {

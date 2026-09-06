@@ -5,6 +5,7 @@ import me.docdrewskii.profitmultiplier.config.ConfigManager;
 import me.docdrewskii.profitmultiplier.model.ItemGroup;
 import me.docdrewskii.profitmultiplier.model.MilestoneCommands;
 import me.docdrewskii.profitmultiplier.model.MultiplierTier;
+import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
 import me.docdrewskii.profitmultiplier.util.NumberUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -127,11 +128,14 @@ public class MilestoneManager {
             if (resolved.startsWith("/")) {
                 resolved = resolved.substring(1);
             }
-            try {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), resolved);
-            } catch (Throwable t) {
-                plugin.getLogger().warning("Milestone command failed: '" + resolved + "': " + t.getMessage());
-            }
+            String finalCommand = resolved;
+            FoliaScheduler.runGlobal(plugin, () -> {
+                try {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
+                } catch (Throwable t) {
+                    plugin.getLogger().warning("Milestone command failed: '" + finalCommand + "': " + t.getMessage());
+                }
+            });
         }
     }
 

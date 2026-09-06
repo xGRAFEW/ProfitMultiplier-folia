@@ -16,10 +16,10 @@ no shop plugin - so it's safe to compile against from any plugin.
 
 | File | What it is |
 |------|------------|
-| `ProfitMultiplier-1.1.0.jar` | the full plugin (goes in `/plugins`) |
-| `ProfitMultiplier-1.1.0-sources.jar` | sources for the whole plugin |
-| **`ProfitMultiplier-API-1.1.0.jar`** | **the slim API jar** (only the `api` package) |
-| `ProfitMultiplier-API-1.1.0-sources.jar` | sources for the slim API jar |
+| `ProfitMultiplier-1.2.0.jar` | the full plugin (goes in `/plugins`) |
+| `ProfitMultiplier-1.2.0-sources.jar` | sources for the whole plugin |
+| **`ProfitMultiplier-API-1.2.0.jar`** | **the slim API jar** (only the `api` package) |
+| `ProfitMultiplier-API-1.2.0-sources.jar` | sources for the slim API jar |
 
 The **API jar** is the "API file" you hand to other developers. It contains
 only the interface, the provider, the events and `ResetCause` - never the
@@ -41,14 +41,14 @@ repositories {
 dependencies {
     // JitPack groupId is com.github.<GitHubUser>, artifactId is the repo name,
     // version is the git tag (or commit hash).
-    compileOnly("com.github.DevDocDrewskii:ProfitMultiplier:1.1.0")
+    compileOnly("com.github.DevDocDrewskii:ProfitMultiplier:1.2.0")
 }
 ```
 
 **Gradle (Groovy DSL)**
 ```groovy
 repositories { maven { url 'https://jitpack.io' } }
-dependencies { compileOnly 'com.github.DevDocDrewskii:ProfitMultiplier:1.1.0' }
+dependencies { compileOnly 'com.github.DevDocDrewskii:ProfitMultiplier:1.2.0' }
 ```
 
 **Maven**
@@ -63,7 +63,7 @@ dependencies { compileOnly 'com.github.DevDocDrewskii:ProfitMultiplier:1.1.0' }
 <dependency>
   <groupId>com.github.DevDocDrewskii</groupId>
   <artifactId>ProfitMultiplier</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
   <scope>provided</scope>
 </dependency>
 ```
@@ -73,12 +73,12 @@ dependencies { compileOnly 'com.github.DevDocDrewskii:ProfitMultiplier:1.1.0' }
 
 ### Option B - Manual jar
 
-Drop `ProfitMultiplier-API-1.1.0.jar` into a `libs/` folder in your project
+Drop `ProfitMultiplier-API-1.2.0.jar` into a `libs/` folder in your project
 and reference it:
 
 ```kotlin
 dependencies {
-    compileOnly(files("libs/ProfitMultiplier-API-1.1.0.jar"))
+    compileOnly(files("libs/ProfitMultiplier-API-1.2.0.jar"))
 }
 ```
 
