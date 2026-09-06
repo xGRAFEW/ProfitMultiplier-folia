@@ -24,7 +24,7 @@ content:
     - "{progress_bar} &7{progress_percent}%"
   actions:
     any:
-      - "[message] &a{group_name}&7: &f{sold} &7sold - currently &a{current_multiplier}x&7."
+      - "[open] category-items"
       - "[sound] UI_BUTTON_CLICK 1 1.2"
 
 items:

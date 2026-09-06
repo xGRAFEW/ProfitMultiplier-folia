@@ -73,3 +73,23 @@ messages:
   player-not-online:
     enabled: true
     message: "{prefix}&cPlayer &f{player} &cis not online."
+
+  shop-unavailable:
+    enabled: true
+    message: "{prefix}&cThe sell shop is unavailable right now (no economy plugin found)."
+
+  sell-item-sold:
+    enabled: true
+    message: "{prefix}&aSold &e{amount}x {item} &afor &e{price}&a."
+
+  sell-not-sellable:
+    enabled: true
+    message: "{prefix}&c{item} &7can't be sold here."
+
+  sellall-result:
+    enabled: true
+    message: "{prefix}&aSold &e{items} &aitem(s) across &e{types} &atype(s) for &e{total}&a."
+
+  sellall-empty:
+    enabled: true
+    message: "{prefix}&eYou don't have anything sellable in your inventory."

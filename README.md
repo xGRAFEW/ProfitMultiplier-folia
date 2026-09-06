@@ -1,6 +1,6 @@
 # ProfitMultiplier
 
-![Version](https://img.shields.io/badge/version-1.2.0-brightgreen)
+![Version](https://img.shields.io/badge/version-1.3.0-brightgreen)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.8%20%E2%86%92%2026.x-blue)
 ![Folia](https://img.shields.io/badge/Folia-supported-success)
 ![Java](https://img.shields.io/badge/Java-8%20bytecode%20(built%20with%2025)-orange)
@@ -30,9 +30,21 @@ time based on each player's progression.
   and EssentialsX `/sell`.
 - **Custom currencies** - display formatting per group; the multiplier itself is
   currency-agnostic (works with whatever your shop pays in).
-- **Fully configurable GUI** (`/sellmulti`) - filler items, custom items via
-  **Nexo / Oraxen / ItemsAdder / HeadDatabase**, **PlaceholderAPI** support everywhere,
-  **click actions**, **pagination**, and live-updating progress bars.
+- **Fully configurable GUI** (`/sellmulti`) - a clean per-category grid: every group gets its
+  own tile showing its own progress, multiplier and next tier. Clicking a category only opens
+  a read-only detail page listing that category's items and prices - it never changes which
+  multiplier applies to an actual sale (that's always resolved automatically from the item
+  itself). Filler items, custom items via **Nexo / Oraxen / ItemsAdder / HeadDatabase**,
+  **PlaceholderAPI** support everywhere, **click actions**, **pagination**, and live-updating
+  progress bars.
+- **Built-in shop** (`/sell`, `/sellall`) - optional, requires **Vault** + any Vault-compatible
+  economy (EssentialsX, CMI, ...). Give any item a `price`/`prices` entry in `config.yml` and
+  it becomes sellable: `/sell` opens a chest-style GUI you drag items into (sold the instant
+  they land - the slot is never used as storage, so there's no window for items to get lost or
+  duped), `/sellall` sweeps your whole inventory in one command. Both go through the exact
+  same pricing/threshold engine as every other shop hook, so progress stays consistent no
+  matter which route a sale comes through. If no economy is found, everything else keeps
+  working and only these two commands report unavailable.
 - **Milestone commands** - run any console command when a player unlocks a tier (crate keys,
   titles, broadcasts), globally or per tier.
 - **Threshold scaling** - permission-based discounts so donor ranks level up faster
@@ -72,6 +84,14 @@ example **mob_drops** and **ores** groups. Open the menu with:
 ```
 
 Then customise `config.yml` and `menus/sellmulti.yml` to taste.
+
+Want a built-in sell shop too? Install Vault + an economy plugin, add a `price` (or a
+`prices:` map per group) to the items you want sellable in `config.yml`, then use:
+
+```
+/sell      # drag-to-sell chest GUI
+/sellall   # sell everything sellable in your inventory at once
+```
 
 ---
 

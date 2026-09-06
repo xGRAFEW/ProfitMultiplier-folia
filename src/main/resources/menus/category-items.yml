@@ -1,0 +1,83 @@
+title: "&8» &2&l{selected_group} Items"
+size: 54
+update: true
+
+filler:
+  enabled: true
+  material: GRAY_STAINED_GLASS_PANE
+  name: " "
+
+# Read-only: shows every item in the category you clicked from /sellmulti, plus the price it
+# sells for through the built-in shop (if one is configured). Clicking an entry here never sells
+# anything — use /sell or /sellall to actually sell items.
+content-slots:
+  - "10-16"
+  - "19-25"
+  - "28-34"
+
+content-source: "items:@selected"
+
+content:
+  material: "{icon}"
+  name: "&a&l{item_name}"
+  lore:
+    - "&7Price: &e{price}"
+    - "&7You've sold: &f{sold_short}"
+  actions:
+    any:
+      - "[message] &a{item_name}&7: price &e{price}&7, sold &f{sold_short} &7so far."
+      - "[sound] UI_BUTTON_CLICK 1 1.2"
+
+items:
+  back:
+    material: ARROW
+    slot: 45
+    name: "&e<- Back to Categories"
+    lore:
+      - "&7Return to the category list."
+    actions:
+      any:
+        - "[open] sellmulti"
+        - "[sound] UI_BUTTON_CLICK 1 1"
+
+  page-info:
+    material: PAPER
+    slot: 49
+    name: "&fPage &a{page}&7/&a{total_pages}"
+    lore:
+      - "&7Every item in this category."
+
+  previous:
+    material: ARROW
+    slot: 46
+    name: "&e<- Previous Page"
+    hide-on-first-page: true
+    lore:
+      - "&7Go to page &f{previous_page}&7."
+    actions:
+      any:
+        - "[previous-page]"
+        - "[sound] UI_BUTTON_CLICK 1 1"
+
+  next:
+    material: ARROW
+    slot: 52
+    name: "&eNext Page ->"
+    hide-on-last-page: true
+    lore:
+      - "&7Go to page &f{next_page}&7."
+    actions:
+      any:
+        - "[next-page]"
+        - "[sound] UI_BUTTON_CLICK 1 1"
+
+  close:
+    material: BARRIER
+    slot: 53
+    name: "&c&lClose"
+    lore:
+      - "&7Click to close this menu."
+    actions:
+      any:
+        - "[close]"
+        - "[sound] UI_BUTTON_CLICK 1 1"

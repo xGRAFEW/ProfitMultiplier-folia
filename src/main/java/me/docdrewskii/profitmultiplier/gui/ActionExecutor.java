@@ -47,6 +47,10 @@ public class ActionExecutor {
                 player.closeInventory();
                 break;
             case OPEN:
+                String group = tokens.get("group");
+                if (group != null) {
+                    plugin.getMenuManager().setSelectedGroup(player, group);
+                }
                 openLater(player, command(player, arg, tokens).trim());
                 break;
             case SOUND:

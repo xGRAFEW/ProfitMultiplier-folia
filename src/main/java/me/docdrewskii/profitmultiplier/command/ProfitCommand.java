@@ -170,6 +170,12 @@ public class ProfitCommand implements TabExecutor {
             sender.sendMessage(color("&e/sellmulti &7- Open the sell-multiplier menu"));
             sender.sendMessage(color("&e/pm gui [menu] &7- Open a menu"));
         }
+        if (sender.hasPermission("profitmultiplier.sell")) {
+            sender.sendMessage(color("&e/sell &7- Open the built-in sell shop"));
+        }
+        if (sender.hasPermission("profitmultiplier.sellall")) {
+            sender.sendMessage(color("&e/sellall &7- Sell every sellable item in your inventory"));
+        }
         if (sender.hasPermission("profitmultiplier.stats")) {
             sender.sendMessage(color("&e/pm stats [player] &7- View sell progression"));
         }

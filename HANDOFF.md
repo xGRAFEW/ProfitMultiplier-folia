@@ -1,7 +1,145 @@
 # HANDOFF
 
-Living progress log for the "add Folia 26.2 support" work. Update this as you go; keep
-`CLAUDE.md` for durable facts and this file for "what's done / what's next."
+Living progress log. Update this as you go; keep `CLAUDE.md` for durable facts and this file
+for "what's done / what's next." Newest session at the top.
+
+---
+
+## Session: per-category progress GUI + built-in shop (v1.3.0)
+
+### Task
+
+1. ✅ Restructure `/sellmulti` so every category (`ItemGroup`) shows its own progress,
+   multiplier, and threshold ladder — never a combined/global counter. This was mostly
+   already true at the engine level (`SellProcessor`/`PlayerDataManager` already resolved
+   and recorded per-category); the actual gap was the GUI, which was hardcoded to one demo
+   category instead of showing all of them.
+2. ✅ Add a native built-in shop: `/sell` (drag-to-sell chest GUI) and `/sellall` (sweep the
+   whole inventory), backed by Vault, reusing the exact same `SellProcessor` pricing path as
+   every other shop hook.
+3. ✅ Build, deploy to the real Folia 26.2 test server, verify a clean enable with no
+   exceptions.
+4. ✅ Commit + push + build a GitHub release.
+
+### Design decisions (confirmed with the user before implementing)
+
+- **Naming**: kept the internal class name `ItemGroup` and config key `groups:` as-is — only
+  user-facing text now says "Category". A full rename would touch ~10 files and break every
+  existing server's `config.yml` for zero functional gain.
+- **Item price source**: a new admin-set `price` (per item) / `prices:` (per group, keyed by
+  material) field in `config.yml` — **not** a live price pulled from the connected shop
+  plugin. None of the existing shop hooks expose a "what does this cost" query (they only
+  react to an actual sale event), and several shops have floating supply/demand prices, so a
+  reflective price-lookup per shop plugin would be both a lot of extra hook code and fragile
+  across shop-plugin updates. This same `price` value now doubles as the real `/sell`
+  transaction price (confirmed with the user — one source of truth instead of two).
+- **Economy backend**: Vault (`VaultAPI` was already a `compileOnly` dependency and already
+  in `softdepend` from a previous session — unused until now). `EconomyManager` looks up the
+  `Economy` service **fresh on every call** rather than caching it at `onEnable` — economy
+  plugins can register their Vault provider after ProfitMultiplier enables depending on load
+  order, so a one-time lookup at boot would wrongly report the shop as permanently
+  unavailable on some servers.
+- **`/sell` GUI mechanics (the dupe-risk-sensitive part)**: the sell-chest inventory's slots
+  are **never actually used as storage**. Every click/shift-click that would place an item
+  into a sell slot is intercepted (`SellMenuListener`, cancels the event first like the
+  existing `MenuListener` pattern), sold immediately via `SellShopService.sellDetached`, and
+  the slot stays empty. There is no tick where a sold item physically sits in the GUI, which
+  removes the whole class of "item got stuck when the window closed at the wrong moment"
+  dupe/loss bugs. Money is always credited **before** anything is removed from the player's
+  real inventory/cursor — if the Vault deposit fails, nothing is taken and nothing is
+  recorded. `InventoryDragEvent` is cancelled outright over this GUI (not supported) to avoid
+  the more complex multi-slot-split dupe surface. An `InventoryCloseEvent` handler is still
+  present as a belt-and-braces safety net (sell-or-return anything unexpectedly found in the
+  GUI on close), even though normal operation should never leave anything there.
+  `/sellall` batches all matching items per material into one `SellProcessor` call each
+  (correct threshold-crossing math) and only removes them from the player's
+  `getStorageContents()` (hotbar + main inventory — armor/offhand deliberately excluded)
+  after that material's money has already landed.
+- **Category GUI navigation**: added a small `Map<UUID,String>` session field in
+  `MenuManager` (`selectedGroup`) plus a new content-source keyword `items:@selected` /
+  `tiers:@selected`. When a dynamic `content-source: groups` tile is clicked, its `{group}`
+  token is captured in `ActionExecutor`'s `OPEN` case before the follow-up menu opens, so a
+  *statically defined* YAML menu (`category-items.yml`) can render whichever category the
+  player *just clicked*, dynamically. This is purely a GUI navigation aid — `SellProcessor`
+  never reads it, so it can't affect what multiplier a real sale gets.
+
+### Files changed
+
+- `model/ItemGroup.java` — added `Map<Material, Double> prices` + `getPrice(Material)`.
+- `config/ConfigManager.java` — parses `items.<mat>.price` and `groups.<name>.prices`, new
+  `getPrice(Material)` / `isSellable(Material)` (group price wins over the standalone item
+  price), and now warns (instead of silently keeping the first match) when a material is
+  listed in two groups.
+- `economy/EconomyManager.java` (new) — thin Vault `Economy` wrapper, lazy lookup, graceful
+  "no economy" fallback (uses the existing `Currency` formatter for `format()` in that case).
+- `shop/SellShopService.java`, `shop/SellAllResult.java` (new) — the pay-then-take selling
+  core shared by the GUI and `/sellall`.
+- `shop/SellMenu.java`, `shop/SellMenuHolder.java`, `shop/SellMenuListener.java` (new) — the
+  `/sell` chest GUI and its click/drag/close handling described above.
+- `command/SellCommand.java` (new) — handles both `sell` and `sellall` commands.
+- `gui/MenuManager.java` — `selectedGroup` session map, `items:@selected` content-source,
+  `{selected_group}` menu-title token.
+- `gui/ActionExecutor.java` — `[open]` now captures `{group}` into the session map first.
+- `menus/sellmulti.yml` — rewritten from a hardcoded single-category demo into a dynamic
+  grid of every configured category (paginated).
+- `menus/category-items.yml` (new) — read-only per-category item + price list, opened from
+  either `sellmulti.yml` or `groups.yml`.
+- `menus/groups.yml` — its entry click now also opens `category-items` instead of just a
+  chat message (kept as a working alias menu; `/sellmulti` is the primary hub now).
+- `plugin.yml` — `sell`/`sellall` commands, `profitmultiplier.sell` /
+  `profitmultiplier.sellall` permissions (both default `true`, matching `.gui`/`.stats`).
+- `config.yml` — new `shop:` section (`sell-gui-title`, `sell-gui-rows`), example
+  `price`/`prices` values added to the `items:`/`crops`/`ores` sections so the shop actually
+  has something sellable out of the box.
+- `lang.yml` — `shop-unavailable`, `sell-item-sold`, `sell-not-sellable`, `sellall-result`,
+  `sellall-empty`.
+- `ProfitMultiplier.java` — wires up `EconomyManager`/`SellShopService`, registers
+  `SellMenuListener`, registers the two new commands.
+- `README.md`, `build.gradle.kts` (version → 1.3.0).
+
+### Build & live-test results (this session)
+
+- `./gradlew build` (`JAVA_HOME` = JDK 21) → **BUILD SUCCESSFUL** after fixing one import
+  (`HumanEntity` is `org.bukkit.entity`, not `org.bukkit.inventory`).
+- Deployed `ProfitMultiplier-1.3.0.jar` to the real Folia 26.2 test server. Reached
+  `Done (29.730s)!` with **no exceptions** from ProfitMultiplier. Log confirmed:
+  `Loaded 3 menu(s): [category-items, groups, sellmulti]`, and the expected graceful
+  degradation warnings (`No supported shop plugin detected`, `No Vault economy found`) — this
+  test server's "Vault" (actually `VaultUnlocked`) has **no** economy provider registered at
+  all right now (confirmed system-wide: MMOItems, EnesOrder, and SmartSpawner all logged the
+  identical "Vault found but no economy provider registered!" at the same boot), so this is a
+  server-config gap, not a ProfitMultiplier bug — the graceful-fallback path is exactly what
+  fired, as designed.
+- Could not send a clean `stop` console command — the server was launched headlessly via a
+  redirected-stdin PowerShell `Process` object whose parent exited after `Start()`, so there
+  was no live handle left to write "stop" into by the time boot finished. Confirmed via
+  `taskkill` (non-forceful) that Windows refuses to close a console-mode Java process that
+  way (exit code 1, "can only be terminated forcefully"); used `Stop-Process -Force` instead.
+  **Not a regression risk** — `onDisable()` here is trivial (just `dataManager.save()` +
+  a log line, no Folia scheduler calls) — but if this project ever needs a real graceful
+  shutdown test again, launch the jar with RCON temporarily enabled (as the previous Folia
+  session did) instead of trying to pipe stdin through a detached process.
+- **Not tested**: an actual connected client clicking through the new `/sellmulti` category
+  grid, the `category-items` drill-down, or dragging items into the `/sell` chest GUI — no
+  Vault economy was available on the test server to exercise `/sell`/`/sellall` end-to-end
+  even if a client had been available. If a regression ever shows up specifically in these
+  new menus/GUI, that's the manual check to do first, ideally on a server with a working
+  Vault economy provider.
+
+### Open items for later (not blockers)
+
+- The test server's Vault economy gap (zEssentials creates its own "money"/"coins" economies
+  and has a `vault.yml`/`vault-configuration.yml` module, but doesn't appear to actually
+  register a Vault `Economy` service on this install) means `/sell`/`/sellall` have never
+  been exercised against a live deposit. Worth fixing that server-side config (or installing
+  a plain EssentialsX alongside for a known-good Vault provider) before the next real GUI
+  click-test pass.
+- `/sell`'s chest GUI only supports whole-stack left-click and single-item right-click (plus
+  shift-click-from-inventory for a full stack). No partial-drag support (drag events over the
+  GUI are cancelled outright) — intentional scope cut for dupe-safety, not a bug, but flag it
+  if a future request wants finer-grained selling.
+
+---
 
 ## Task
 

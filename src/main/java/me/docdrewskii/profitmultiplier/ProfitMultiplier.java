@@ -8,11 +8,15 @@ import me.docdrewskii.profitmultiplier.config.ConfigManager;
 import me.docdrewskii.profitmultiplier.config.LangManager;
 import me.docdrewskii.profitmultiplier.currency.CurrencyManager;
 import me.docdrewskii.profitmultiplier.data.PlayerDataManager;
+import me.docdrewskii.profitmultiplier.economy.EconomyManager;
 import me.docdrewskii.profitmultiplier.gui.MenuListener;
 import me.docdrewskii.profitmultiplier.gui.MenuManager;
 import me.docdrewskii.profitmultiplier.hook.sell.SellHookManager;
 import me.docdrewskii.profitmultiplier.milestone.MilestoneManager;
 import me.docdrewskii.profitmultiplier.placeholder.ProfitPlaceholders;
+import me.docdrewskii.profitmultiplier.command.SellCommand;
+import me.docdrewskii.profitmultiplier.shop.SellMenuListener;
+import me.docdrewskii.profitmultiplier.shop.SellShopService;
 import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.ServicePriority;
@@ -30,6 +34,8 @@ public class ProfitMultiplier extends JavaPlugin {
     private MenuManager menuManager;
     private MilestoneManager milestoneManager;
     private SellHookManager sellHookManager;
+    private EconomyManager economyManager;
+    private SellShopService sellShopService;
 
     @Override
     public void onEnable() {
@@ -59,7 +65,17 @@ public class ProfitMultiplier extends JavaPlugin {
         sellHookManager = new SellHookManager(this);
         sellHookManager.registerAll();
 
+        economyManager = new EconomyManager(this);
+        sellShopService = new SellShopService(this);
+        if (economyManager.setup()) {
+            getLogger().info("Hooked into a Vault economy — /sell and /sellall are enabled.");
+        } else {
+            getLogger().warning("No Vault economy found — /sell and /sellall will be unavailable "
+                    + "until one is installed (e.g. EssentialsX). Everything else still works.");
+        }
+
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
+        getServer().getPluginManager().registerEvents(new SellMenuListener(this), this);
 
         FoliaScheduler.runGlobalTimer(this, () -> menuManager.refreshOpenMenus(),
                 MENU_REFRESH_TICKS, MENU_REFRESH_TICKS);
@@ -70,6 +86,10 @@ public class ProfitMultiplier extends JavaPlugin {
             command.setExecutor(handler);
             command.setTabCompleter(handler);
         }
+
+        SellCommand sellHandler = new SellCommand(this);
+        registerSellCommand("sell", sellHandler);
+        registerSellCommand("sellall", sellHandler);
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new ProfitPlaceholders(this).register();
@@ -82,6 +102,16 @@ public class ProfitMultiplier extends JavaPlugin {
         }, PERIODIC_SECONDS, PERIODIC_SECONDS);
 
         getLogger().info("ProfitMultiplier v" + getDescription().getVersion() + " enabled.");
+    }
+
+    private void registerSellCommand(String name, SellCommand handler) {
+        PluginCommand command = getCommand(name);
+        if (command == null) {
+            getLogger().warning("Command '" + name + "' is missing from plugin.yml — skipping.");
+            return;
+        }
+        command.setExecutor(handler);
+        command.setTabCompleter(handler);
     }
 
     @Override
@@ -117,5 +147,13 @@ public class ProfitMultiplier extends JavaPlugin {
 
     public SellHookManager getSellHookManager() {
         return sellHookManager;
+    }
+
+    public EconomyManager getEconomyManager() {
+        return economyManager;
+    }
+
+    public SellShopService getSellShopService() {
+        return sellShopService;
     }
 }

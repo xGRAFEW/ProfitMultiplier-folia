@@ -28,6 +28,12 @@ commands:
     description: ProfitMultiplier main command
     aliases: [pm, sellmulti]
     usage: "/pm <gui|reload|reset|resetall|stats>"
+  sell:
+    description: Open the built-in sell shop
+    usage: "/sell"
+  sellall:
+    description: Sell every sellable item in your inventory
+    usage: "/sellall"
 
 permissions:
   profitmultiplier.admin:
@@ -38,4 +44,10 @@ permissions:
     default: true
   profitmultiplier.gui:
     description: Allows opening the sell-multiplier menu
+    default: true
+  profitmultiplier.sell:
+    description: Allows opening the built-in /sell shop
+    default: true
+  profitmultiplier.sellall:
+    description: Allows using /sellall to sell every sellable item in your inventory
     default: true

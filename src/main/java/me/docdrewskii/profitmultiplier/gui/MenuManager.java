@@ -36,6 +36,7 @@ public class MenuManager {
     private final ProfitMultiplier plugin;
     private final ActionExecutor actionExecutor;
     private final Map<String, Menu> menus = new LinkedHashMap<>();
+    private final Map<java.util.UUID, String> selectedGroup = new HashMap<>();
 
     public MenuManager(ProfitMultiplier plugin) {
         this.plugin = plugin;
@@ -44,6 +45,20 @@ public class MenuManager {
 
     public ActionExecutor getActionExecutor() {
         return actionExecutor;
+    }
+
+    /**
+     * Remembers which category a player last clicked in a dynamic category grid, so a
+     * statically-defined follow-up menu can render that category's own detail view via the
+     * "items:@selected" content-source. Purely a GUI navigation aid — never consulted when
+     * pricing or recording an actual sale.
+     */
+    public void setSelectedGroup(Player player, String groupName) {
+        selectedGroup.put(player.getUniqueId(), groupName);
+    }
+
+    public String getSelectedGroup(Player player) {
+        return selectedGroup.get(player.getUniqueId());
     }
 
     public void loadAll() {
@@ -91,7 +106,7 @@ public class MenuManager {
             // Could not read the jar (exploded classpath in dev) — fall back to known names.
         }
         if (!scanned) {
-            for (String name : new String[]{"sellmulti.yml", "groups.yml"}) {
+            for (String name : new String[]{"sellmulti.yml", "groups.yml", "category-items.yml"}) {
                 if (!new File(folder, name).exists()) {
                     try {
                         plugin.saveResource("menus/" + name, false);
@@ -278,6 +293,12 @@ public class MenuManager {
 
         Map<String, String> titleTokens = new HashMap<>();
         titleTokens.put("player", player.getName());
+        String selected = getSelectedGroup(player);
+        if (selected != null) {
+            ItemGroup selectedGroupObj = plugin.getConfigManager().getGroup(selected);
+            titleTokens.put("selected_group", selectedGroupObj != null && selectedGroupObj.getDisplayName() != null
+                    ? selectedGroupObj.getDisplayName() : capitalize(selected));
+        }
         String title = TextUtil.render(player, menu.getTitle(), titleTokens);
         if (!VersionHelper.IS_MODERN && title.length() > 32) {
             title = title.substring(0, 32);
@@ -523,6 +544,10 @@ public class MenuManager {
         if (colon > 0) {
             String type = lower.substring(0, colon);
             String groupName = source.substring(colon + 1).trim();
+            if (groupName.equalsIgnoreCase("@selected")) {
+                groupName = getSelectedGroup(player);
+            }
+
             if (type.equals("tiers") || type.equals("group-tiers") || type.equals("group_tiers")) {
                 ItemGroup group = cfg.getGroup(groupName);
                 if (group != null) {
@@ -535,12 +560,50 @@ public class MenuManager {
                         tokens.put("icon", icon);
                         entries.add(tokens);
                     }
-                } else {
+                } else if (groupName != null) {
+                    plugin.getLogger().warning("Menu '" + menu.getName() + "' content-source references unknown group '" + groupName + "'.");
+                }
+            } else if (type.equals("items") || type.equals("group-items") || type.equals("group_items")) {
+                ItemGroup group = cfg.getGroup(groupName);
+                if (group != null) {
+                    for (Material material : group.getMaterials()) {
+                        entries.add(computeItemTokens(player, group, material));
+                    }
+                } else if (groupName != null) {
                     plugin.getLogger().warning("Menu '" + menu.getName() + "' content-source references unknown group '" + groupName + "'.");
                 }
             }
         }
         return entries;
+    }
+
+    private Map<String, String> computeItemTokens(Player player, ItemGroup group, Material material) {
+        ConfigManager cfg = plugin.getConfigManager();
+        PlayerDataManager pdm = plugin.getDataManager();
+
+        Map<String, String> t = new HashMap<>();
+        t.put("player", player.getName());
+        t.put("icon", material.name());
+        t.put("item", material.name());
+        t.put("item_name", friendlyMaterial(material));
+
+        Double price = cfg.getPrice(material);
+        t.put("price", price != null ? plugin.getEconomyManager().format(price) : "&7N/A");
+        t.put("has_price", String.valueOf(price != null));
+
+        long sold = pdm.getSold(player.getUniqueId(), material);
+        t.put("sold", NumberUtil.commas(sold));
+        t.put("sold_short", NumberUtil.abbreviate(sold));
+        return t;
+    }
+
+    private String friendlyMaterial(Material mat) {
+        String name = mat.name().replace('_', ' ').toLowerCase(Locale.ROOT);
+        StringBuilder sb = new StringBuilder();
+        for (String w : name.split(" ")) {
+            if (!w.isEmpty()) sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1)).append(' ');
+        }
+        return sb.toString().trim();
     }
 
     private String defaultGroupIcon(ItemGroup group) {

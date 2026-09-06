@@ -20,6 +20,8 @@ public class ConfigManager {
 
     private final Map<Material, MilestoneCommands> itemMilestones = new HashMap<>();
 
+    private final Map<Material, Double> itemPrices = new HashMap<>();
+
     private final Map<String, ItemGroup> groups = new LinkedHashMap<>();
 
     private final Map<Material, ItemGroup> materialGroup = new HashMap<>();
@@ -49,6 +51,7 @@ public class ConfigManager {
 
         itemTiers.clear();
         itemMilestones.clear();
+        itemPrices.clear();
         groups.clear();
         materialGroup.clear();
         blacklist.clear();
@@ -72,6 +75,10 @@ public class ConfigManager {
                     if (milestones != null) {
                         itemMilestones.put(mat, milestones);
                     }
+                }
+
+                if (itemSection.contains("price")) {
+                    itemPrices.put(mat, itemSection.getDouble("price"));
                 }
             }
         }
@@ -107,11 +114,29 @@ public class ConfigManager {
                 String currency = groupSection.getString("currency", null);
                 MilestoneCommands milestones = parseMilestones(groupSection.getConfigurationSection("milestones"));
 
+                Map<Material, Double> prices = new HashMap<>();
+                ConfigurationSection pricesSection = groupSection.getConfigurationSection("prices");
+                if (pricesSection != null) {
+                    for (String matName : pricesSection.getKeys(false)) {
+                        Material mat = VersionHelper.resolveMaterial(matName);
+                        if (mat == null) {
+                            plugin.getLogger().warning("Unknown material '" + matName + "' in prices of group '" + key + "'.");
+                            continue;
+                        }
+                        prices.put(mat, pricesSection.getDouble(matName));
+                    }
+                }
+
                 ItemGroup group = new ItemGroup(key.toLowerCase(Locale.ROOT), members, tiers,
-                        icon, displayName, stackMode, currency, milestones);
+                        icon, displayName, stackMode, currency, milestones, prices);
                 groups.put(group.getName(), group);
                 for (Material mat : members) {
-                    materialGroup.putIfAbsent(mat, group);
+                    ItemGroup existing = materialGroup.putIfAbsent(mat, group);
+                    if (existing != null && existing != group) {
+                        plugin.getLogger().warning("Material '" + mat.name() + "' is listed in both group '"
+                                + existing.getName() + "' and group '" + group.getName()
+                                + "' — it will only count toward '" + existing.getName() + "'.");
+                    }
                 }
             }
         }
@@ -310,6 +335,24 @@ public class ConfigManager {
 
     public ItemGroup getGroupFor(Material material) {
         return materialGroup.get(material);
+    }
+
+    /**
+     * Admin-configured sell price for one unit of the material, or {@code null} if none is
+     * set (meaning the item is not sellable through the built-in shop / price-aware menus).
+     * Checked in order: the item's own group price, then a standalone per-item price.
+     */
+    public Double getPrice(Material material) {
+        ItemGroup group = materialGroup.get(material);
+        if (group != null) {
+            Double groupPrice = group.getPrice(material);
+            if (groupPrice != null) return groupPrice;
+        }
+        return itemPrices.get(material);
+    }
+
+    public boolean isSellable(Material material) {
+        return getPrice(material) != null;
     }
 
     public ItemGroup getGroup(String name) {

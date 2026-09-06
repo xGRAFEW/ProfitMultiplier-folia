@@ -1,5 +1,5 @@
 title: "&8» &2&lSell Multipliers"
-rows: 3
+size: 45
 update: true
 
 status-unlocked: "&a&lUNLOCKED &a✔"
@@ -16,101 +16,69 @@ filler:
   material: GRAY_STAINED_GLASS_PANE
   name: " "
 
+# One tile per configured category (see "groups:" in config.yml). Clicking a tile only opens a
+# read-only detail page for that category — it never changes which multiplier applies when you
+# actually sell an item; that is always resolved automatically from the item itself.
+content-slots:
+  - "10-16"
+  - "19-25"
+  - "28-34"
+
+content-source: groups
+
+content:
+  material: "{icon}"
+  name: "&a&l{group_name}"
+  lore:
+    - "&7Sell items in this category to"
+    - "&7upgrade your multiplier."
+    - ""
+    - "&7Current multiplier: &a{current_multiplier}x"
+    - "&7Sold: &f{sold_short}&7/&f{threshold_short} &8(&e{progress_percent}%&8)"
+    - "{progress_bar}"
+    - ""
+    - "&eClick to view items & prices"
+  actions:
+    any:
+      - "[open] category-items"
+      - "[sound] UI_BUTTON_CLICK 1 1.2"
+
 items:
-
-  info:
-    material: "player:{player}"
-    slot: 4
-    name: "&2&l{player}'s Crop Progress"
-    group: crops
-    glow: false
+  page-info:
+    material: PAPER
+    slot: 40
+    name: "&fPage &a{page}&7/&a{total_pages}"
     lore:
-      - "&7Total crops sold: &f{sold}"
-      - "&7Current multiplier: &a{current_multiplier}x"
-      - ""
-      - "&7Next tier in: &e{remaining_short} &7crops"
-      - "{progress_bar} &7{progress_percent}%"
+      - "&7Browse every sell-multiplier category."
+      - "&7Add more in config.yml and they show up here."
+
+  previous:
+    material: ARROW
+    slot: 37
+    name: "&e<- Previous Page"
+    hide-on-first-page: true
+    lore:
+      - "&7Go to page &f{previous_page}&7."
     actions:
       any:
-        - "[sound] UI_BUTTON_CLICK 1 1.2"
+        - "[previous-page]"
+        - "[sound] UI_BUTTON_CLICK 1 1"
 
-  tier-1:
-    material: GRASS_BLOCK
-    slot: 11
-    group: crops
-    tier: 10000
-    name: "&a&l1.1x &7Sell Multiplier"
-    glow: false
+  next:
+    material: ARROW
+    slot: 43
+    name: "&eNext Page ->"
+    hide-on-last-page: true
     lore:
-      - "&7Sell &f{threshold} &7crops total to unlock"
-      - "&7a permanent &a1.1x &7multiplier on all crops."
-      - ""
-      - "&7Sold: &f{sold}&7/&f{threshold}"
-      - "{progress_bar} &7{progress_percent}%"
-      - ""
-      - "&7Status: {status}"
-    actions:
-      left:
-        - "[message] &7You are working toward the &a1.1x &7crop multiplier!"
-        - "[sound] ENTITY_EXPERIENCE_ORB_PICKUP 1 1"
-      right:
-        - "[message] &7Sell crops at any &e/shop &7to make progress."
-
-  tier-2:
-    material: WHEAT
-    slot: 13
-    group: crops
-    tier: 100000
-    name: "&e&l1.2x &7Sell Multiplier"
-    glow: false
-    lore:
-      - "&7Sell &f{threshold} &7crops total to unlock"
-      - "&7a permanent &e1.2x &7multiplier on all crops."
-      - ""
-      - "&7Sold: &f{sold}&7/&f{threshold}"
-      - "{progress_bar} &7{progress_percent}%"
-      - ""
-      - "&7Status: {status}"
-    actions:
-      left:
-        - "[message] &7You are working toward the &e1.2x &7crop multiplier!"
-        - "[sound] ENTITY_EXPERIENCE_ORB_PICKUP 1 1"
-
-  tier-3:
-    material: KELP
-    slot: 15
-    group: crops
-    tier: 1000000
-    name: "&b&l1.3x &7Sell Multiplier"
-    glow: false
-    lore:
-      - "&7Sell &f{threshold} &7crops total to unlock"
-      - "&7a permanent &b1.3x &7multiplier on all crops."
-      - ""
-      - "&7Sold: &f{sold}&7/&f{threshold}"
-      - "{progress_bar} &7{progress_percent}%"
-      - ""
-      - "&7Status: {status}"
-    actions:
-      left:
-        - "[message] &7You are working toward the &b1.3x &7crop multiplier!"
-        - "[sound] ENTITY_EXPERIENCE_ORB_PICKUP 1 1"
-
-  all-groups:
-    material: CHEST
-    slot: 26
-    name: "&6&lAll Multiplier Groups"
-    lore:
-      - "&7View every sell-multiplier group"
-      - "&7and your progress in each one."
+      - "&7Go to page &f{next_page}&7."
     actions:
       any:
-        - "[open] groups"
+        - "[next-page]"
         - "[sound] UI_BUTTON_CLICK 1 1"
 
   close:
     material: BARRIER
-    slot: 22
+    slot: 44
     name: "&c&lClose"
     lore:
       - "&7Click to close this menu."
