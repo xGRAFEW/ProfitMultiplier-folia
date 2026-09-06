@@ -26,6 +26,15 @@ price-rotation:
   # like "30m", "6h", "1d" (rotates repeatedly on that interval, counted from the last reroll).
   schedule: "6h"
 
+# Optional: shows the current sell price as a lore line on plain vanilla items (no custom model
+# data) sitting in a player's OWN inventory — not just inside /sellmulti or /sell. Off by
+# default. Toggle at runtime with "/pm pricelore [on|off]" (that command is the recommended way
+# to change this — it also immediately refreshes/clears everyone online; editing this value
+# directly only takes effect on the next reload/restart). This is fully independent from
+# price-rotation and from what /sellmulti shows — turning it off never changes any price.
+inventory-price-lore:
+  enabled: false
+
 currency:
   symbol: "$"
   position: PREFIX

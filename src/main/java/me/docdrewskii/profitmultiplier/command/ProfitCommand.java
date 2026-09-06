@@ -5,6 +5,7 @@ import me.docdrewskii.profitmultiplier.api.ResetCause;
 import me.docdrewskii.profitmultiplier.config.ConfigManager;
 import me.docdrewskii.profitmultiplier.config.LangManager;
 import me.docdrewskii.profitmultiplier.data.PlayerDataManager;
+import me.docdrewskii.profitmultiplier.shop.InventoryPriceLoreManager;
 import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -79,6 +80,11 @@ public class ProfitCommand implements TabExecutor {
 
             case "stats":
                 handleStats(sender, args);
+                return true;
+
+            case "pricelore":
+                if (noPerm(sender, "profitmultiplier.admin")) return true;
+                handlePriceLore(sender, args);
                 return true;
 
             case "help":
@@ -165,6 +171,26 @@ public class ProfitCommand implements TabExecutor {
         }
     }
 
+    private void handlePriceLore(CommandSender sender, String[] args) {
+        InventoryPriceLoreManager mgr = plugin.getInventoryPriceLoreManager();
+        boolean newState;
+        if (args.length >= 2) {
+            String arg = args[1].toLowerCase();
+            if (arg.equals("on")) {
+                newState = true;
+            } else if (arg.equals("off")) {
+                newState = false;
+            } else {
+                plugin.getLang().send(sender, "usage-pricelore");
+                return;
+            }
+        } else {
+            newState = !mgr.isEnabled();
+        }
+        mgr.setEnabled(newState);
+        plugin.getLang().send(sender, newState ? "pricelore-enabled" : "pricelore-disabled");
+    }
+
     private void sendHelp(CommandSender sender) {
         sender.sendMessage(color("&6&lProfitMultiplier"));
         if (sender.hasPermission("profitmultiplier.gui")) {
@@ -184,6 +210,7 @@ public class ProfitCommand implements TabExecutor {
             sender.sendMessage(color("&e/pm reload &7- Reload config & lang"));
             sender.sendMessage(color("&e/pm reset <player> &7- Reset one player's totals"));
             sender.sendMessage(color("&e/pm resetall &7- Reset every player's totals"));
+            sender.sendMessage(color("&e/pm pricelore [on|off] &7- Toggle price lore on inventory items"));
         }
     }
 
@@ -200,6 +227,7 @@ public class ProfitCommand implements TabExecutor {
                 subs.add("reload");
                 subs.add("reset");
                 subs.add("resetall");
+                subs.add("pricelore");
             }
             String prefix = args[0].toLowerCase();
             for (String s : subs) {
@@ -211,6 +239,12 @@ public class ProfitCommand implements TabExecutor {
                 String prefix = args[1].toLowerCase();
                 for (String menu : plugin.getMenuManager().getMenuNames()) {
                     if (menu.startsWith(prefix)) out.add(menu);
+                }
+            }
+            if (args[0].equalsIgnoreCase("pricelore") && sender.hasPermission("profitmultiplier.admin")) {
+                String prefix = args[1].toLowerCase();
+                for (String opt : new String[]{"on", "off"}) {
+                    if (opt.startsWith(prefix)) out.add(opt);
                 }
             }
             boolean wantsPlayer =

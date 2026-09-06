@@ -77,6 +77,7 @@ public class PriceRotationManager {
         rerollAll();
         nextRotationMillis = computeNext(System.currentTimeMillis());
         save();
+        plugin.getInventoryPriceLoreManager().refreshAllOnline();
     }
 
     private void rerollAll() {

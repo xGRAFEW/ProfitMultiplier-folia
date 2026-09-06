@@ -16,6 +16,7 @@ import me.docdrewskii.profitmultiplier.hook.sell.SellHookManager;
 import me.docdrewskii.profitmultiplier.milestone.MilestoneManager;
 import me.docdrewskii.profitmultiplier.placeholder.ProfitPlaceholders;
 import me.docdrewskii.profitmultiplier.command.SellCommand;
+import me.docdrewskii.profitmultiplier.shop.InventoryPriceLoreManager;
 import me.docdrewskii.profitmultiplier.shop.SellMenuListener;
 import me.docdrewskii.profitmultiplier.shop.SellShopService;
 import me.docdrewskii.profitmultiplier.util.FoliaScheduler;
@@ -39,6 +40,7 @@ public class ProfitMultiplier extends JavaPlugin {
     private EconomyManager economyManager;
     private SellShopService sellShopService;
     private PriceRotationManager priceRotationManager;
+    private InventoryPriceLoreManager inventoryPriceLoreManager;
 
     @Override
     public void onEnable() {
@@ -83,8 +85,11 @@ public class ProfitMultiplier extends JavaPlugin {
             getLogger().info("Price rotation enabled — next reroll in " + priceRotationManager.formatCountdown() + ".");
         }
 
+        inventoryPriceLoreManager = new InventoryPriceLoreManager(this);
+
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
         getServer().getPluginManager().registerEvents(new SellMenuListener(this), this);
+        getServer().getPluginManager().registerEvents(inventoryPriceLoreManager, this);
 
         FoliaScheduler.runGlobalTimer(this, () -> menuManager.refreshOpenMenus(),
                 MENU_REFRESH_TICKS, MENU_REFRESH_TICKS);
@@ -170,5 +175,9 @@ public class ProfitMultiplier extends JavaPlugin {
 
     public PriceRotationManager getPriceRotationManager() {
         return priceRotationManager;
+    }
+
+    public InventoryPriceLoreManager getInventoryPriceLoreManager() {
+        return inventoryPriceLoreManager;
     }
 }

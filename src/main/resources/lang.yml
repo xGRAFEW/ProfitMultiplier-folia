@@ -93,3 +93,15 @@ messages:
   sellall-empty:
     enabled: true
     message: "{prefix}&eYou don't have anything sellable in your inventory."
+
+  pricelore-enabled:
+    enabled: true
+    message: "{prefix}&aPrice lore on inventory items is now &2ON&a."
+
+  pricelore-disabled:
+    enabled: true
+    message: "{prefix}&cPrice lore on inventory items is now &4OFF&c."
+
+  usage-pricelore:
+    enabled: true
+    message: "{prefix}&cUsage: /pm pricelore [on|off]"

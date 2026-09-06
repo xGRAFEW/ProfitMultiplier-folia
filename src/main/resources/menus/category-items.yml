@@ -19,10 +19,9 @@ content-source: "items:@selected"
 
 content:
   material: "{icon}"
-  name: "&a&l{item_name}"
+  name: "&f{item_name}"
   lore:
-    - "&7Price: &e{price}"
-    - "&7You've sold: &f{sold_short}"
+    - "&e&l{price}"
   actions:
     any:
       - "[message] &a{item_name}&7: price &e{price}&7, sold &f{sold_short} &7so far."

@@ -1,6 +1,6 @@
 # ProfitMultiplier
 
-![Version](https://img.shields.io/badge/version-1.4.0-brightgreen)
+![Version](https://img.shields.io/badge/version-1.5.0-brightgreen)
 ![Minecraft](https://img.shields.io/badge/Minecraft-1.8%20%E2%86%92%2026.x-blue)
 ![Folia](https://img.shields.io/badge/Folia-supported-success)
 ![Java](https://img.shields.io/badge/Java-8%20bytecode%20(built%20with%2025)-orange)
@@ -51,6 +51,13 @@ time based on each player's progression.
   clock time (`"00:00"`) or a repeating interval (`"6h"`, `"1d"`). Survives restarts. A
   countdown to the next reroll is available as a menu token (`{price_reset_countdown}`), shown
   by default on the `/sellmulti` grid.
+- **Price lore on inventory items** (optional) - shows the current sell price as a lore line
+  when a player hovers a sellable *plain vanilla* item (no custom model data) anywhere in their
+  own inventory, not just inside a menu. Refreshes on pickup/craft/join and whenever prices
+  rotate. Deliberately skips anything with custom model data so it never fights MMOItems /
+  ItemsAdder / Oraxen for control of an item's lore. Off by default - toggle with
+  `/pm pricelore [on|off]`, independent from everything else (turning it off never changes any
+  price, including what `/sellmulti` shows).
 - **Milestone commands** - run any console command when a player unlocks a tier (crate keys,
   titles, broadcasts), globally or per tier.
 - **Threshold scaling** - permission-based discounts so donor ranks level up faster

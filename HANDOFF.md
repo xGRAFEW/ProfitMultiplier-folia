@@ -5,9 +5,59 @@ for "what's done / what's next." Newest session at the top.
 
 ---
 
-## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.4.0)
+## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.5.0)
 
-### Price rotation + per-item /sellall messages (v1.4.0)
+### Inventory price lore + /pm pricelore toggle (v1.5.0)
+
+User clarified a prior request (I'd misread "โชว์ราคาไอเทมในตัว" as "show price in the
+category-items menu" and styled that instead) — they actually meant hovering an item **in the
+player's own inventory** (anywhere, not just our GUIs) should show its sell price, confirmed
+with two screenshots of a vanilla item tooltip with a price line under the name.
+
+Bukkit has no server-side "hover" event — tooltips are rendered entirely client-side from
+whatever lore is currently on the ItemStack. So the only way to do this is to actually write a
+lore line onto the real item and keep it in sync. New `shop/InventoryPriceLoreManager.java`:
+- Scoped to **plain vanilla items only** (`!meta.hasCustomModelData()`) per explicit user
+  choice — MMOItems/ItemsAdder/Oraxen (all three installed on the test server) manage their own
+  item lore and regenerate it on their own triggers; touching a custom-model-data item here
+  would fight them for control of the lore list and could easily tag the wrong "item" since
+  custom items typically reuse a plain vanilla `Material` (e.g. every MMOItems sword might be
+  `DIAMOND_SWORD` + a model-data id).
+- Each managed item is tagged with a `PersistentDataContainer` marker
+  (`profitmultiplier:sell_price_lore`) so a later pass knows that single lore line is ours to
+  replace or clear, and it never touches lore it didn't add itself (if an eligible item already
+  has non-empty lore we don't own, it's left alone).
+- Refreshes a player's `getStorageContents()` (hotbar + main inv) on: `PlayerJoinEvent`,
+  `EntityPickupItemEvent`, `InventoryClickEvent` (MONITOR, any inventory — covers crafting,
+  moving items around, etc.), and once for every online player right after each
+  `PriceRotationManager` reroll (`plugin.getInventoryPriceLoreManager().refreshAllOnline()`
+  called from `PriceRotationManager.tick()`).
+- `refresh(player)` is safe to call unconditionally regardless of the enabled flag — when
+  disabled, price resolves to `null` for every item, which makes the same code path strip any
+  previously-added tag/lore instead of adding anything. This means toggling off actually cleans
+  up immediately rather than leaving stale price lines stuck on items until they're sold.
+- **Fully independent from `/sellmulti`'s `{price}` and from price-rotation** — confirmed with
+  the user this must stay true. `InventoryPriceLoreManager` only *reads*
+  `PriceRotationManager.getCurrentPrice(...)`; nothing reads `inventory-price-lore.enabled`
+  anywhere else in the codebase, so toggling this can never affect what any menu shows.
+- New command `/pm pricelore [on|off]` (defaults to toggling current state if no arg,
+  `profitmultiplier.admin` required) — persists to `config.yml` and immediately calls
+  `refreshAllOnline()` either way, so the effect (or cleanup) is instant instead of waiting for
+  a reload/restart. New config `inventory-price-lore: enabled: false` (off by default).
+
+Also restyled `menus/category-items.yml`'s item template per an earlier (correctly-understood
+this time) ask — a minimal look: plain white item name, single bold-yellow price line, no
+"Price:" label prefix and no sold-count line. Applied directly to both the repo's bundled
+default and the test server's already-deployed copy of the file (menu YAMLs, unlike
+`config.yml`, are never auto-merged — see below — so the earlier v1.3.1 filler-removal change
+had never actually reached the test server's deployed `sellmulti.yml`/`groups.yml`/
+`category-items.yml` either; fixed those three deployed files by hand while in there).
+
+Rebuilt, redeployed, clean enable/disable cycle on the real Folia test server, no exceptions;
+confirmed the config-merge fix from earlier in this session is still working (`inventory-price-
+lore:` section appeared in the deployed config.yml on first boot).
+
+### Price rotation + per-item /sellall messages + config-merge bug fix (v1.4.0)
 
 Two more follow-up requests after v1.3.1 shipped:
 
@@ -75,8 +125,6 @@ tick fired within one 10s check cycle, every priced material rerolled independen
 ±20%, and `next-rotation` advanced correctly. Reverted the test server's config back to
 `enabled: false` / `schedule: 6h` and deleted the test `prices.yml` afterward so the server is
 left in a clean, unmodified-by-testing state.
-
-### Follow-up fixes (v1.3.1, after live client testing)
 
 ### Follow-up fixes (v1.3.1, after live client testing)
 
