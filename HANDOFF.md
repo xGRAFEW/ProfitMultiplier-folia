@@ -9,8 +9,9 @@ Living progress log for the "add Folia 26.2 support" work. Update this as you go
 2. ✅ Make ProfitMultiplier run correctly on Folia 26.2.
 3. ✅ Verify against the real test server at
    `C:\Users\ACER\Desktop\Project\Survival SMP Folia 26.2 test`.
-4. 🔄 Commit + push + build a GitHub release to
-   https://github.com/xGRAFEW/ProfitMultiplier-folia.
+4. ✅ Commit + push + build a GitHub release to
+   https://github.com/xGRAFEW/ProfitMultiplier-folia — done:
+   https://github.com/xGRAFEW/ProfitMultiplier-folia/releases/tag/v1.2.0
 
 ## Environment discovered this session
 
@@ -107,27 +108,42 @@ Living progress log for the "add Folia 26.2 support" work. Update this as you go
   dispatch (`ProfitCommand.handleGui`) — if you get a chance with a real client connected
   to the Folia test server, that's the highest-value manual check left.
 
-## Not yet done
+## Release (done)
 
-- Commit, push to `origin/master`.
-- Cut a GitHub release (tag `v1.2.0`) with the built jars attached. `gh` isn't installed —
-  use the GitHub REST API (`curl`/PowerShell with a token) or hand off to the user to run
-  `gh release create` themselves. **No token has been configured in this session** — will
-  need one from the user (a PAT with `repo` scope, or ask them to run `gh auth login` /
-  create the release manually) unless one is already available via an env var or existing
-  git-credential-helper this session hasn't checked yet.
+- Committed as `a58038d` "Add Folia 26.2 support" (repo-local git identity was unset on
+  this machine — set to match the existing commit history, `DocDrewskii
+  <rl.docdrewskii@gmail.com>`, via `git config user.name`/`user.email` with **no**
+  `--global`, so it only affects this repo).
+- `git push` needed an interactive browser login (Git Credential Manager) that this
+  sandboxed shell can't open — the user ran it themselves via the `!` terminal passthrough
+  and it succeeded (credential now cached in Windows Credential Manager as
+  `LegacyGeneric:target=git:https://github.com`, account `xGRAFEW`).
+- `gh` CLI was not installed; installed via
+  `winget install --id GitHub.cli -e --accept-package-agreements --accept-source-agreements --silent`
+  → `C:\Program Files\GitHub CLI\gh.exe` (not yet on PATH in either this session's shells
+  or the user's own terminal right after install — call it by full path, or open a fresh
+  terminal, until PATH propagates).
+- `gh auth login` also needs interactive browser confirmation; when run non-interactively
+  it falls back to the OAuth **device code** flow (prints a one-time code + a
+  `https://github.com/login/device` URL and polls in the background until the user
+  authorizes it in a browser — no Enter keypress needed once it reaches that point). The
+  user completed this themselves via `!`. Logged in as `xGRAFEW` with `repo` scope.
+- Release created and verified:
+  https://github.com/xGRAFEW/ProfitMultiplier-folia/releases/tag/v1.2.0 (tag `v1.2.0`,
+  target `master`, all four `build/libs/*.jar` attached, release notes written to
+  describe the Folia work). Command used:
+  `gh release create v1.2.0 build/libs/*.jar --repo xGRAFEW/ProfitMultiplier-folia --title "..." --notes-file ... --target master`.
+
+## Open items for later (not blockers)
+
+- No real Minecraft client was available in this environment to connect and click through
+  `/sellmulti` or `/pm gui <menu> <otherPlayer>` in-game — the RCON smoke test covered
+  command dispatch and the repeating scheduler tasks, but not actual GUI clicks. If a
+  regression ever shows up specifically in menu rendering/clicking on Folia, that's the
+  path to manually verify first.
 - `Bukkit.getOfflinePlayer(name)` (used in `SkullUtil.fromPlayer` and elsewhere) can do a
   blocking Mojang lookup on cache miss — pre-existing behavior, not Folia-specific, not in
   scope for this task, but worth a future look if startup/GUI-open latency ever comes up.
-
-## Next session should
-
-1. If picking this up mid-way: check `git status` — commit is likely already made and
-   possibly pushed; check `git log origin/master` to see how far the previous session got.
-2. If a release still needs creating: check for a GitHub token (ask the user, or check
-   `gh auth status` if `gh` has since been installed) and either script the release via the
-   REST API (`POST /repos/xGRAFEW/ProfitMultiplier-folia/releases`, then upload the four
-   `build/libs/*.jar` as release assets) or ask the user to run it.
-3. If revisiting Folia testing: try to get a real Minecraft client connected to the test
-   server to click through `/sellmulti` and `/pm gui <menu> <otherPlayer>` — see "Not yet
-   tested" above.
+- `gh` and both Temurin JDKs (21, 25) are now installed system-wide on this dev machine —
+  future sessions shouldn't need to reinstall them; `gh auth` and the git credential
+  should also both still be cached (Windows Credential Manager / gh's keyring storage).
