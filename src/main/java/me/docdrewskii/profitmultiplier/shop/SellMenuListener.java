@@ -74,7 +74,7 @@ public class SellMenuListener implements Listener {
 
     private void denyIfUnsellable(InventoryClickEvent event, Player player, ItemStack incoming) {
         if (incoming == null || incoming.getType() == Material.AIR) return;
-        if (!plugin.getSellShopService().isSellable(incoming.getType())) {
+        if (!plugin.getSellShopService().isSellable(incoming)) {
             event.setCancelled(true);
             denySale(player, incoming.getType());
         }
@@ -89,8 +89,9 @@ public class SellMenuListener implements Listener {
         boolean touchesTop = event.getRawSlots().stream().anyMatch(slot -> slot < topSize);
         if (!touchesTop) return;
 
-        Material type = event.getOldCursor().getType();
-        if (type != Material.AIR && !plugin.getSellShopService().isSellable(type)) {
+        ItemStack oldCursor = event.getOldCursor();
+        Material type = oldCursor.getType();
+        if (type != Material.AIR && !plugin.getSellShopService().isSellable(oldCursor)) {
             event.setCancelled(true);
             if (event.getWhoClicked() instanceof Player) {
                 denySale((Player) event.getWhoClicked(), type);

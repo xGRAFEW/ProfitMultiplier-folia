@@ -5,6 +5,58 @@ for "what's done / what's next." Newest session at the top.
 
 ---
 
+## Session: built-in shop was selling MMOItems custom items (v1.6.1)
+
+User report on the live Purpur 26.2 test server (`Survival SMP Purpur 26.2 test`, a *different*
+box than the Folia one named in `CLAUDE.md` — MMOItems, GUIShop, CMI, Vault all installed there):
+`/sellall` was sweeping up and selling MMOItems custom gear crafted via `/mi` alongside real
+vanilla items.
+
+**Root cause**: the whole built-in shop (`SellShopService`, used by both `/sell`'s chest GUI and
+`/sellall`) matched sellable items purely by vanilla `Material` type — never checked whether a
+stack was actually a *plain* vanilla item. MMOItems (and ItemsAdder/Oraxen) items reuse vanilla
+materials under custom model data (e.g. a custom MMOItems sword is still `Material.DIAMOND_SWORD`
++ a model data id) — a well-known reuse pattern that `InventoryPriceLoreManager` (the inventory
+price-lore feature from v1.5.0) already had to guard against for the exact same reason, but that
+guard was never applied to the actual sell path. If the reused material happened to have a
+configured price, custom items got swept in.
+
+A second, worse bug was hiding in the same code path: `SellShopService.sellAll()`'s removal step
+(`removeExact`) removed stacks purely by material match too, with no tie to which specific stack
+had actually been priced/credited — so it could delete a player's custom item from a *different*
+inventory slot than the one that was actually sold, not just sell it at the wrong (or missing)
+price.
+
+**Fix**: added `SellShopService.isSellable(ItemStack)` — same material-has-a-price check as
+before, plus `!meta.hasCustomModelData()`, mirroring `InventoryPriceLoreManager`'s existing rule.
+`sellAll()` was rewritten to record the exact inventory *slot indices* that passed this check per
+material (not just a running count) and only null out those specific slots after a successful
+sale — no more sweep-by-material-type removal. `SellMenuListener`'s two "is this item allowed
+into the sell GUI" checks (`onClick`'s `denyIfUnsellable`, `onDrag`) were switched from
+`isSellable(Material)` to `isSellable(ItemStack)` so a custom item is rejected with the normal
+`sell-not-sellable` message on the way in, instead of ever reaching the GUI's close-time sell
+pass at all — `onClose()` itself didn't need to change since only genuine plain-vanilla stacks can
+reach it now.
+
+Deliberately did **not** make this a config toggle — it's a correctness fix (a custom-modeled
+item should never be auto-sold as if it were the plain vanilla material it happens to share),
+not a new feature, and the codebase already treats "plain vanilla only" as the settled rule for
+this exact class of item via `InventoryPriceLoreManager`.
+
+Bumped to v1.6.1 (`build.gradle.kts`) for changelog traceability — real sell-logic bug fix, not
+cosmetic. Build succeeded clean. Deployed to the **Purpur** test server (not the Folia one) and
+did a real restart cycle; enable log showed the usual clean `Hooked into a Vault economy — /sell
+and /sellall are enabled.` line, no exceptions. Could not do an in-game verification pass myself
+(no MC client available to this session) — flagged to the user to re-test `/sellall` with an
+MMOItems item + a vanilla item of the same underlying material in inventory and confirm only the
+vanilla one gets sold.
+
+Also diagnosed (separately, config-side, not a code bug) that `/sell` alone was being hijacked by
+CMI's own `Alias.yml` (`sell: Enabled: true`, CMI enables after ProfitMultiplier in the plugin
+load order on this server) — a known CMI behavior, not something this plugin can fix from its own
+code. Recommended disabling that one CMI alias entry; left as a decision for the user, not applied
+by this session.
+
 ## Session: per-category progress GUI + built-in shop (v1.3.0 → v1.6.0)
 
 ### Tiers switched from item-count to cumulative-revenue based (v1.6.0)

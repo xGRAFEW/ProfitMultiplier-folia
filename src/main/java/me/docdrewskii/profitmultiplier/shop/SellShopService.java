@@ -5,8 +5,11 @@ import me.docdrewskii.profitmultiplier.hook.sell.SellProcessor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -25,6 +28,21 @@ public class SellShopService {
 
     public boolean isSellable(Material material) {
         return plugin.getConfigManager().isSellable(material);
+    }
+
+    /**
+     * Same as {@link #isSellable(Material)} but also rejects anything that isn't a plain vanilla
+     * item — a custom item from MMOItems / ItemsAdder / Oraxen usually shares a vanilla Material
+     * with unrelated priced items (e.g. every MMOItems sword might be DIAMOND_SWORD + a custom
+     * model data id), and those plugins manage the item's identity themselves, so this shop must
+     * never treat one as a plain sellable stack of that material. Same rule this shop's
+     * {@code InventoryPriceLoreManager} sibling already applies for the same reason.
+     */
+    public boolean isSellable(ItemStack stack) {
+        if (stack == null || stack.getType() == Material.AIR) return false;
+        if (!isSellable(stack.getType())) return false;
+        ItemMeta meta = stack.getItemMeta();
+        return meta == null || !meta.hasCustomModelData();
     }
 
     /**
@@ -56,44 +74,41 @@ public class SellShopService {
 
     /**
      * Sweeps the player's main inventory + hotbar (armor and offhand are left alone) and sells
-     * every stack that has a configured price. Each distinct material is sold in a single call
-     * so threshold/tier crossings are computed correctly.
+     * every stack that has a configured price and is a plain vanilla item (see
+     * {@link #isSellable(ItemStack)}). Each distinct material is sold in a single call so
+     * threshold/tier crossings are computed correctly. Removal happens by the exact slots that
+     * were counted — never by a generic "any stack of this material" sweep — so a custom item
+     * (e.g. an MMOItems weapon) sitting in a different slot of the same material is never touched.
      */
     public SellAllResult sellAll(Player player) {
+        ItemStack[] contents = player.getInventory().getStorageContents();
+
         Map<Material, Integer> counts = new LinkedHashMap<>();
-        for (ItemStack stack : player.getInventory().getStorageContents()) {
-            if (stack == null || stack.getType() == Material.AIR) continue;
+        Map<Material, List<Integer>> slots = new LinkedHashMap<>();
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack stack = contents[i];
+            if (!isSellable(stack)) continue;
             Material mat = stack.getType();
-            if (!isSellable(mat)) continue;
             counts.merge(mat, stack.getAmount(), Integer::sum);
+            slots.computeIfAbsent(mat, k -> new ArrayList<>()).add(i);
         }
 
         SellAllResult result = new SellAllResult();
+        boolean removed = false;
         for (Map.Entry<Material, Integer> entry : counts.entrySet()) {
             Double credited = sellDetached(player, entry.getKey(), entry.getValue());
             if (credited == null) continue;
 
-            removeExact(player, entry.getKey(), entry.getValue());
+            for (int slot : slots.get(entry.getKey())) {
+                contents[slot] = null;
+            }
+            removed = true;
             result.add(entry.getKey(), entry.getValue(), credited);
         }
 
-        return result;
-    }
-
-    private void removeExact(Player player, Material material, int amount) {
-        ItemStack[] contents = player.getInventory().getStorageContents();
-        int remaining = amount;
-        for (int i = 0; i < contents.length && remaining > 0; i++) {
-            ItemStack stack = contents[i];
-            if (stack == null || stack.getType() != material) continue;
-            int take = Math.min(stack.getAmount(), remaining);
-            remaining -= take;
-            if (take >= stack.getAmount()) {
-                contents[i] = null;
-            } else {
-                stack.setAmount(stack.getAmount() - take);
-            }
+        if (removed) {
+            player.getInventory().setStorageContents(contents);
         }
-        player.getInventory().setStorageContents(contents);
+        return result;
     }
 }
