@@ -5,6 +5,27 @@ for "what's done / what's next." Newest session at the top.
 
 ---
 
+## Session: unbold inventory price lore (v1.7.1)
+
+Tiny follow-up after v1.7.0 shipped. User has a live production server whose deployed
+`plugins/ProfitMultiplier/menus/category-items.yml` predates this session (Thai-language
+custom lore, `' G'`-suffix currency) — walked them through hand-editing that live file to add
+`{base_price}`/`{price_change}` lines matching their existing wording (menu YAMLs still don't
+auto-merge, per the v1.7.0 entry below — confirmed again this session that `/sellall`'s new
+`default: op` *does* apply after just swapping the jar + a real restart, since `plugin.yml`
+permissions live inside the jar and aren't a copied-to-disk file like `config.yml`/menus).
+
+Separately, user asked about the price shown when hovering a sellable item **in a player's
+own inventory** (`InventoryPriceLoreManager` — a different feature from the shop GUI, off by
+default, no menu-YAML template at all — the lore line is hardcoded in Java). They wanted it
+not bold. Changed `InventoryPriceLoreManager.java`'s lore line from `"&e&l" + price` to
+`"&e" + price` (dropped the `&l`) — one-line change, no config/behavior otherwise touched.
+
+Bumped to v1.7.1. Build succeeded clean, deployed to the real Folia 26.2 test server,
+full start/RCON-stop cycle, no exceptions (`ProfitMultiplier v1.7.1 enabled.` → clean
+`RegionShutdownThread` shutdown). `server.properties` RCON settings reverted afterward, same
+as every prior session's pattern.
+
 ## Session: GUI price-change indicator + /sellall permission tightened (v1.7.0)
 
 Two small user-requested changes, bundled into one release.

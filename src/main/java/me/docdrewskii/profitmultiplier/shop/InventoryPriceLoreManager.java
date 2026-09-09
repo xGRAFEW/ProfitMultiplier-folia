@@ -105,7 +105,7 @@ public class InventoryPriceLoreManager implements Listener {
         }
 
         String line = ChatColor.translateAlternateColorCodes('&',
-                "&e&l" + plugin.getEconomyManager().format(price));
+                "&e" + plugin.getEconomyManager().format(price));
         if (ours && currentLore != null && currentLore.size() == 1 && line.equals(currentLore.get(0))) {
             return null; // already up to date
         }
