@@ -43,12 +43,12 @@ public class InventoryPriceLoreManager implements Listener {
     private final NamespacedKey priceTag;
 
     /**
-     * Players currently viewing some other inventory (any GUI that isn't their own player
-     * inventory — this includes other shop plugins' menus, since we have no generic way to tell
-     * those apart from anything else). Our price lore is real item-meta data, not a client-only
-     * overlay, so if we don't strip it while a foreign GUI is open, that GUI can end up
-     * displaying our line too whenever it renders/clones an item straight out of the player's
-     * inventory (several "quick sell" style shops do exactly that).
+     * Players currently viewing a custom GUI belonging to another plugin (see
+     * {@link #isOwnView}) — their own inventory, our own menus, and genuine vanilla containers
+     * are all exempt. Our price lore is real item-meta data, not a client-only overlay, so if we
+     * don't strip it while a foreign plugin's menu is open, that menu can end up displaying our
+     * line too whenever it renders/clones an item straight out of the player's inventory
+     * (several "quick sell" style shops do exactly that).
      */
     private final Set<UUID> suppressed = new HashSet<>();
 
@@ -172,14 +172,29 @@ public class InventoryPriceLoreManager implements Listener {
     }
 
     /**
-     * True for the player's own inventory screen and for our own menus — neither ever renders a
-     * player's real inventory item back to them (our menus build fresh icons from config), so
-     * there's no leak risk and no need to suppress the lore while either is open.
+     * True for the player's own inventory screen, our own menus, and genuine vanilla containers
+     * (chests, furnaces, shulker boxes, horses, minecarts, ...) — none of those ever substitute
+     * a different rendering for the item, they just show it as-is, which is exactly what the
+     * lore is for. Only a *custom* GUI (another plugin's menu) risks re-rendering the item
+     * somewhere the price line doesn't belong.
      */
     private boolean isOwnView(Player player, InventoryHolder holder) {
         return holder == player
                 || holder instanceof me.docdrewskii.profitmultiplier.gui.MenuHolder
-                || holder instanceof SellMenuHolder;
+                || holder instanceof SellMenuHolder
+                || isVanillaHolder(holder);
+    }
+
+    /**
+     * Vanilla containers/entities are implemented by Bukkit/CraftBukkit itself, so their holder's
+     * class always lives under the server's own "org.bukkit" package — checking that instead of
+     * a specific interface (Container, DoubleChest, ...) avoids depending on API classes that
+     * don't exist on every Spigot/Paper version this plugin supports (down to 1.8).
+     */
+    private boolean isVanillaHolder(InventoryHolder holder) {
+        if (holder == null) return false;
+        Package pkg = holder.getClass().getPackage();
+        return pkg != null && pkg.getName().startsWith("org.bukkit.");
     }
 
     @EventHandler

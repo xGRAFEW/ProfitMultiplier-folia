@@ -5,6 +5,32 @@ for "what's done / what's next." Newest session at the top.
 
 ---
 
+## Session: narrow the v1.7.2 lore-suppression to actual foreign GUIs only (v1.7.3)
+
+Immediate follow-up — user asked whether the v1.7.2 fix could avoid also hiding the price
+lore while a plain vanilla container (chest, furnace, etc.) is open, not just other plugins'
+menus. That blanket behavior was called out as an accepted trade-off in the v1.7.2 entry
+above, but it turned out to be easy to narrow properly instead of just accepting it.
+
+**Refinement**: `InventoryPriceLoreManager.isOwnView` now also exempts genuine vanilla
+containers/entities via a new `isVanillaHolder` check — `holder.getClass().getPackage()`
+starting with `"org.bukkit."` (every CraftBukkit implementation of a vanilla container/entity
+holder lives under that package on every server implementation, regardless of version).
+Deliberately did **not** check for a specific interface (`org.bukkit.block.Container`,
+`DoubleChest`, etc.) — some of those types don't exist on the older Spigot API versions this
+plugin still targets (down to 1.8, per `CLAUDE.md`), and referencing a missing class in a type
+check can throw `NoClassDefFoundError` at runtime on those versions. A package-name check has
+no such dependency. Net effect: lore now stays visible while browsing a real chest/furnace/
+shulker box/horse/etc. (the item is just being displayed as-is, no leak risk), and is only
+suppressed for an actual foreign plugin's custom GUI (null holder, or a holder class from that
+plugin's own package) — which is exactly the leak the user originally reported.
+
+Bumped to v1.7.3. Build succeeded clean, deployed to the real Folia 26.2 test server, full
+start/RCON-stop cycle, no exceptions. Same in-game caveat as v1.7.2: no MC client available
+in this environment, so the actual "open a real chest → lore still shows / open GUIShop's
+menu → lore doesn't" distinction hasn't been visually confirmed — flagged for the user to
+check next time they're in-game.
+
 ## Session: stop inventory price lore leaking into other shop plugins' GUIs (v1.7.2)
 
 User report: after enabling `inventory-price-lore`, our price line started showing up
