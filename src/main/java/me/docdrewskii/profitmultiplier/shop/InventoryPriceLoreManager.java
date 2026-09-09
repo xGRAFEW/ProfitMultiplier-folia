@@ -11,13 +11,20 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Optional, off-by-default feature: shows the current sell price as a lore line when a player
@@ -34,6 +41,16 @@ public class InventoryPriceLoreManager implements Listener {
 
     private final ProfitMultiplier plugin;
     private final NamespacedKey priceTag;
+
+    /**
+     * Players currently viewing some other inventory (any GUI that isn't their own player
+     * inventory — this includes other shop plugins' menus, since we have no generic way to tell
+     * those apart from anything else). Our price lore is real item-meta data, not a client-only
+     * overlay, so if we don't strip it while a foreign GUI is open, that GUI can end up
+     * displaying our line too whenever it renders/clones an item straight out of the player's
+     * inventory (several "quick sell" style shops do exactly that).
+     */
+    private final Set<UUID> suppressed = new HashSet<>();
 
     public InventoryPriceLoreManager(ProfitMultiplier plugin) {
         this.plugin = plugin;
@@ -57,7 +74,7 @@ public class InventoryPriceLoreManager implements Listener {
      * strips lore this manager previously added, it never adds anything new.
      */
     public void refresh(Player player) {
-        boolean enabled = isEnabled();
+        boolean enabled = isEnabled() && !suppressed.contains(player.getUniqueId());
         ItemStack[] contents = player.getInventory().getStorageContents();
         boolean changed = false;
         for (int i = 0; i < contents.length; i++) {
@@ -134,5 +151,39 @@ public class InventoryPriceLoreManager implements Listener {
         if (event.getWhoClicked() instanceof Player) {
             refresh((Player) event.getWhoClicked());
         }
+    }
+
+    @EventHandler
+    public void onInventoryOpen(InventoryOpenEvent event) {
+        if (!(event.getPlayer() instanceof Player)) return;
+        Player player = (Player) event.getPlayer();
+        if (isOwnView(player, event.getInventory().getHolder())) return;
+        suppressed.add(player.getUniqueId());
+        refresh(player);
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (!(event.getPlayer() instanceof Player)) return;
+        Player player = (Player) event.getPlayer();
+        if (isOwnView(player, event.getInventory().getHolder())) return;
+        suppressed.remove(player.getUniqueId());
+        refresh(player);
+    }
+
+    /**
+     * True for the player's own inventory screen and for our own menus — neither ever renders a
+     * player's real inventory item back to them (our menus build fresh icons from config), so
+     * there's no leak risk and no need to suppress the lore while either is open.
+     */
+    private boolean isOwnView(Player player, InventoryHolder holder) {
+        return holder == player
+                || holder instanceof me.docdrewskii.profitmultiplier.gui.MenuHolder
+                || holder instanceof SellMenuHolder;
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        suppressed.remove(event.getPlayer().getUniqueId());
     }
 }

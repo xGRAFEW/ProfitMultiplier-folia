@@ -5,6 +5,43 @@ for "what's done / what's next." Newest session at the top.
 
 ---
 
+## Session: stop inventory price lore leaking into other shop plugins' GUIs (v1.7.2)
+
+User report: after enabling `inventory-price-lore`, our price line started showing up
+**inside other shop plugins' own menus** (this test server has GUIShop hooked) — not just
+when hovering an item in their own inventory as intended.
+
+**Root cause**: our lore line is real `ItemMeta` data, not a client-only overlay — Bukkit has
+no such thing as a per-viewer tooltip. `InventoryPriceLoreManager` tags the actual `ItemStack`
+objects sitting in the player's real inventory. Several third-party "quick sell" style shop
+GUIs build their own menu by rendering/cloning the player's *actual* inventory items (to show
+"you have N of this, click to sell") rather than building fresh icons — so whatever lore we'd
+already baked onto that real item shows up unmodified inside their GUI too. There's no
+generic Bukkit hook to intercept "a foreign plugin is about to render this exact ItemStack in
+its own menu," so the only generic fix is to make sure our lore simply isn't present on the
+item at all while any such foreign GUI might be reading it.
+
+**Fix**: `InventoryPriceLoreManager` now tracks a `Set<UUID> suppressed` — populated via new
+`InventoryOpenEvent`/`InventoryCloseEvent` handlers. Opening *any* inventory whose holder isn't
+the player themselves and isn't one of our own menu holders (`gui.MenuHolder` /
+`shop.SellMenuHolder` — neither of those ever renders a player's real inventory item back to
+them, they always build fresh icons from config, so they're safe to exempt) suppresses the
+feature for that player until they close it; `refresh()` now checks this set alongside the
+existing config toggle. This is a blanket rule, not per-plugin special-casing (consistent with
+this codebase's existing "no compile-time dependency on any shop plugin" philosophy) — the
+accepted trade-off is that the price lore also temporarily disappears from the visible bottom-
+inventory while a plain vanilla chest/furnace/etc. is open, not just while an actual foreign
+shop GUI is up. Considered acceptable since the feature is meant for casual inventory
+browsing, not for use mid-menu. Added a `PlayerQuitEvent` handler to clear stale suppression
+entries on disconnect.
+
+Bumped to v1.7.2. Build succeeded clean, deployed to the real Folia 26.2 test server (which
+has GUIShop hooked, the same plugin type the user reported the leak against), full
+start/RCON-stop cycle, no exceptions. **Not verified in-game** — no MC client available in
+this environment to actually open GUIShop's own sell menu and confirm the lore is gone from
+it; that's the manual check to do next if this regresses. `server.properties` RCON settings
+reverted afterward as usual.
+
 ## Session: unbold inventory price lore (v1.7.1)
 
 Tiny follow-up after v1.7.0 shipped. User has a live production server whose deployed
