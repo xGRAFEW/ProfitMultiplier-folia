@@ -5,6 +5,69 @@ for "what's done / what's next." Newest session at the top.
 
 ---
 
+## Session: GUI price-change indicator + /sellall permission tightened (v1.7.0)
+
+Two small user-requested changes, bundled into one release.
+
+**1. Show market movement in the category-items GUI.** User wanted the per-item price shown
+in the shop GUI to also say how far up/down it currently is versus a "standard" (anchor)
+price — relevant now that price rotation (v1.4.0) can swing an item's live price by a
+configured percentage on a schedule. The anchor was already sitting right there:
+`ConfigManager.getPrice(material)` is the plain configured base price rotation swings around
+(`PriceRotationManager.getCurrentPrice` reads it as the center of its ± swing), so no new
+config or state was needed — just a comparison of two already-existing values.
+
+- `NumberUtil`: added `percentChange(standard, current)`, `signedPercent(double)` (e.g.
+  "+12.5%"/"-8%"/"0%"), and `priceChangeIndicator(double)` (color+arrow, e.g. "&a▲ +12.5%" /
+  "&c▼ -8%" / "&7■ 0%" when within 0.05 of unchanged).
+- `MenuManager.computeItemTokens`: now also resolves the base price and exposes
+  `{base_price}`, `{price_change_percent}`, `{price_change_raw}`, `{price_change}` alongside
+  the existing `{price}` token — available anywhere an `items:@selected`/`group-items`
+  content-source is used (currently only `category-items.yml`).
+- `menus/category-items.yml`: lore now shows the standard price and the market indicator
+  under the live price; the click chat message includes the same info. Applied to both the
+  repo's bundled default and the already-deployed copy on the real Folia test server (menu
+  YAMLs aren't auto-merged — same reason prior sessions had to hand-edit both copies).
+- This is purely a display feature — `SellShopService`/`SellProcessor` (the real charge path)
+  were not touched, so what a player actually gets paid is unaffected.
+
+**2. `/sellall` permission tightened to opt-in.** Was `profitmultiplier.sellall: default: true`
+(everyone could use it) since it was added in v1.3.0. User asked that only players explicitly
+granted the permission be able to use it. Changed `default` to `op` in `plugin.yml` — matches
+the convention already used by `profitmultiplier.admin` in this same file for "restricted,
+must be granted via a permission plugin or op" — server owners aren't locked out, but regular
+players now need an explicit grant (e.g. via LuckPerms) instead of having it by default.
+`/sell` (`profitmultiplier.sell`) was deliberately left at `default: true` — user only asked
+about `/sellall`. No code change needed beyond the manifest — `SellCommand` already calls
+`player.hasPermission("profitmultiplier.sellall")` before allowing the command.
+
+Bumped to v1.7.0. Build succeeded clean (`JAVA_HOME` = JDK 21). Deployed
+`ProfitMultiplier-1.7.0.jar` to the real Folia 26.2 test server (replacing the stale 1.6.0 jar
+that had been sitting there since the last deploy) and did a full start/stop cycle via a
+temporarily-enabled RCON connection (password set, then reverted — `server.properties` is
+back to its original `enable-rcon=false` / blank password state afterward, same pattern as
+past sessions). Log confirmed `Enabling ProfitMultiplier v1.7.0` → `Loaded 3 menu(s):
+[category-items, groups, sellmulti]` → `Hooked into a Vault economy` → `ProfitMultiplier
+v1.7.0 enabled.`, no exceptions; `/pm reload` over RCON round-tripped correctly; clean `stop`
+via RCON produced a normal `RegionShutdownThread`/`MoonriseCommon` shutdown sequence.
+
+**Note on this environment's process launching**: `Start-Process ... -RedirectStandardOutput`
+(detached, backgrounded) silently died within ~10s of starting the JVM this session (only
+`Starting org.bukkit.craftbukkit.Main` ever reached stdout, nothing in stderr, `logs/latest.log`
+was never touched — stayed on its stale Sep-7 copy) — cause not fully diagnosed, but launching
+the same `java -jar canvas.jar` command line directly as the PowerShell tool's own tracked
+background command (not detached via `Start-Process`) worked reliably and stayed up for the
+full test. If a future session hits an inexplicable silent-death-after-`Starting
+org.bukkit.craftbukkit.Main` with a stale `logs/latest.log` that never updates, that's the
+known workaround. Wrote a minimal Source-RCON client in PowerShell (raw TCP, no external
+tool) for this session since neither `gh`/gradle-adjacent tooling nor Python are available
+here for that; not saved into the repo (scratch-only), so a future session will need to
+re-write it (it's ~40 lines — see this entry for the packet framing if useful:
+length-prefixed `int32 LE` id/type/payload/`\0\0`, auth type `3`, exec type `2`).
+
+**Not touched**: wiki pages (still describe pre-1.4.0 pricing in places, per earlier
+sessions' notes — unchanged again this round).
+
 ## Session: built-in shop was selling MMOItems custom items (v1.6.1)
 
 User report on the live Purpur 26.2 test server (`Survival SMP Purpur 26.2 test`, a *different*

@@ -7,6 +7,7 @@ public final class NumberUtil {
     private static final DecimalFormat COMMA = new DecimalFormat("#,##0");
     private static final DecimalFormat COMMA_DECIMAL = new DecimalFormat("#,##0.##");
     private static final DecimalFormat MULT = new DecimalFormat("0.##");
+    private static final DecimalFormat CHANGE_PERCENT = new DecimalFormat("0.#");
 
     private NumberUtil() {
     }
@@ -78,5 +79,25 @@ public final class NumberUtil {
 
     private static String trim(double value) {
         return MULT.format(value);
+    }
+
+    /** Percentage change of {@code current} relative to {@code standard} (e.g. +12.5, -8.0). */
+    public static double percentChange(double standard, double current) {
+        if (standard == 0) return 0.0;
+        return ((current - standard) / standard) * 100.0;
+    }
+
+    /** Formats a percent-change value with an explicit sign, e.g. "+12.5%", "-8%", "0%". */
+    public static String signedPercent(double changePercent) {
+        if (Math.abs(changePercent) < 0.05) return "0%";
+        String sign = changePercent > 0 ? "+" : "";
+        return sign + CHANGE_PERCENT.format(changePercent) + "%";
+    }
+
+    /** A colored, arrow-prefixed price-change indicator suitable for menu lore, e.g. "&a▲ +12.5%". */
+    public static String priceChangeIndicator(double changePercent) {
+        if (Math.abs(changePercent) < 0.05) return "&7■ 0%";
+        if (changePercent > 0) return "&a▲ " + signedPercent(changePercent);
+        return "&c▼ " + signedPercent(changePercent);
     }
 }

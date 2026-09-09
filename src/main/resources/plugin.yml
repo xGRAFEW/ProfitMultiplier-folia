@@ -50,4 +50,4 @@ permissions:
     default: true
   profitmultiplier.sellall:
     description: Allows using /sellall to sell every sellable item in your inventory
-    default: true
+    default: op

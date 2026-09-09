@@ -591,8 +591,19 @@ public class MenuManager {
         t.put("item_name", friendlyMaterial(material));
 
         Double price = plugin.getPriceRotationManager().getCurrentPrice(material);
+        Double basePrice = plugin.getConfigManager().getPrice(material);
         t.put("price", price != null ? plugin.getEconomyManager().format(price) : "&7N/A");
         t.put("has_price", String.valueOf(price != null));
+
+        // "base_price" is the standard/anchor price configured in config.yml — the value price
+        // rotation swings around. Comparing the live price against it tells a player whether the
+        // market is currently up or down, and by how much, independent of whether rotation is on.
+        t.put("base_price", basePrice != null ? plugin.getEconomyManager().format(basePrice) : "&7N/A");
+        double changePercent = (price != null && basePrice != null)
+                ? NumberUtil.percentChange(basePrice, price) : 0.0;
+        t.put("price_change_percent", NumberUtil.signedPercent(changePercent));
+        t.put("price_change_raw", String.valueOf(changePercent));
+        t.put("price_change", NumberUtil.priceChangeIndicator(changePercent));
 
         long sold = pdm.getSold(player.getUniqueId(), material);
         t.put("sold", NumberUtil.commas(sold));

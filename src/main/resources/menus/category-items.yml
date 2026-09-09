@@ -22,9 +22,11 @@ content:
   name: "&f{item_name}"
   lore:
     - "&e&l{price}"
+    - "&7Standard price: &f{base_price}"
+    - "&7Market: {price_change}"
   actions:
     any:
-      - "[message] &a{item_name}&7: price &e{price}&7, sold &f{sold_short} &7so far."
+      - "[message] &a{item_name}&7: price &e{price}&7 (&7standard &f{base_price}&7, {price_change}&7), sold &f{sold_short} &7so far."
       - "[sound] UI_BUTTON_CLICK 1 1.2"
 
 items:

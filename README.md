@@ -53,7 +53,10 @@ prices just get boosted at sale time based on each player's progression.
   randomized current price (± a configured percentage) on a schedule: either a fixed daily
   clock time (`"00:00"`) or a repeating interval (`"6h"`, `"1d"`). Survives restarts. A
   countdown to the next reroll is available as a menu token (`{price_reset_countdown}`), shown
-  by default on the `/sellmulti` grid.
+  by default on the `/sellmulti` grid. The per-category item list (`category-items.yml`) shows
+  each item's standard/anchor price (`{base_price}`) next to its live price, plus how far the
+  live price has swung from it (`{price_change}` / `{price_change_percent}`) - so after a
+  reroll, players can immediately see whether an item's price went up or down and by how much.
 - **Price lore on inventory items** (optional) - shows the current sell price as a lore line
   when a player hovers a sellable *plain vanilla* item (no custom model data) anywhere in their
   own inventory, not just inside a menu. Refreshes on pickup/craft/join and whenever prices
